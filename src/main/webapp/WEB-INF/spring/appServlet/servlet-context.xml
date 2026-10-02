@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns="http://www.springframework.org/schema/mvc"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:beans="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+
+	<!-- 자식 컨텍스트: HTTP 요청을 처리하는 Controller와 JSP/정적 자원 설정을 등록한다. -->
+	
+	<!-- Controller의 요청 매핑을 활성화한다. -->
+	<annotation-driven />
+
+	<!-- CSS/JavaScript는 Controller를 거치지 않고 파일을 그대로 전달한다. -->
+	<resources mapping="/resources/**" location="/resources/" />
+	<resources mapping="/css/**" location="/css/" />
+	<resources mapping="/js/**" location="/js/" />
+
+	<!-- 거래처 화면을 /WEB-INF/views/basic/partner-list.jsp에서 찾는다. -->
+	<beans:bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<beans:property name="prefix" value="/WEB-INF/views/" />
+		<beans:property name="suffix" value=".jsp" />
+	</beans:bean>
+	
+	<!-- 메인 화면 Controller를 등록한다. -->
+	<context:component-scan base-package="com.hexagon.hcount.controller" />
+	
+	
+	
+</beans:beans>
