@@ -1,14 +1,18 @@
 package com.hexagon.hcount.service.partner;
 
-import org.springframework.stereotype.Service;
+import com.hexagon.hcount.domain.partner.PartnerPage;
+import com.hexagon.hcount.domain.partner.PartnerVO;
 
-import com.hexagon.hcount.mapper.partner.PartnerMapper;
+// Controller와 Mapper 사이에서 거래처 기능을 처리
+// ControllerとMapperの間で取引先機能を処理
+public interface PartnerService {
+	PartnerPage getPartners(String keyword, Integer page, Integer amount);
 
-import lombok.AllArgsConstructor;
+	PartnerVO getPartner(Long partnerId);
 
-@Service
-@AllArgsConstructor
-public class PartnerService {
-	private final PartnerMapper mapper;
+	void register(PartnerVO partner);
 
+	boolean modify(PartnerVO partner);
+
+	boolean toggleUse(Long partnerId);
 }
