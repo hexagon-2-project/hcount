@@ -44,14 +44,15 @@ public class PartnerListControllerTests {
 	// 목록 화면 테스트
 	// リスト画面テスト
 	public void listLoadsPartnerPage() throws Exception {
-		PartnerPage page = new PartnerPage(Collections.<PartnerVO>emptyList(), new PartnerSearchCriteria("한빛", 1, 20), 0);
-		when(service.getPartners("한빛", 1, 20)).thenReturn(page);
+		PartnerPage page = new PartnerPage(Collections.<PartnerVO>emptyList(), new PartnerSearchCriteria("지호", 1, 20, true), 0);
+		when(service.getPartners("지호", 1, 20, true)).thenReturn(page);
 
-		mockMvc.perform(get("/basic/partner-list").param("q", "한빛").param("page", "1"))
+		mockMvc.perform(get("/basic/partner-list").param("q", "지호").param("page", "1").param("includeInactive", "true"))
 				.andExpect(status().isOk())
 				.andExpect(view().name("basic/partner-list"))
 				.andExpect(model().attribute("partnerPage", page))
-				.andExpect(model().attribute("q", "한빛"));
+				.andExpect(model().attribute("q", "지호"))
+				.andExpect(model().attribute("includeInactive", true));
 	}
 
 	@Test
@@ -59,7 +60,7 @@ public class PartnerListControllerTests {
 	// 登録後のリスト移動テスト
 	public void registerRedirectsToList() throws Exception {
 		mockMvc.perform(post("/basic/partner/register")
-				.param("partnerCode", "P001").param("partnerName", "한빛상사").param("partnerType", "SALES"))
+				.param("partnerCode", "HJ001").param("partnerName", "지호상사").param("partnerType", "SALES"))
 				.andExpect(status().is3xxRedirection())
 				.andExpect(redirectedUrl("/basic/partner-list"))
 				.andExpect(flash().attribute("message", "거래처가 등록되었습니다."));
@@ -72,9 +73,10 @@ public class PartnerListControllerTests {
 	public void toggleUseKeepsSearchPosition() throws Exception {
 		when(service.toggleUse(10L)).thenReturn(true);
 		mockMvc.perform(post("/basic/partner/toggle-use")
-				.param("partnerId", "10").param("q", "hanbit").param("page", "2"))
+				.param("partnerId", "10").param("q", "jiho").param("page", "2")
+				.param("includeInactive", "true"))
 				.andExpect(status().is3xxRedirection())
-				.andExpect(redirectedUrl("/basic/partner-list?q=hanbit&page=2"))
+				.andExpect(redirectedUrl("/basic/partner-list?q=jiho&page=2&includeInactive=true"))
 				.andExpect(flash().attribute("message", "사용 상태가 변경되었습니다."));
 		verify(service).toggleUse(10L);
 	}

@@ -21,8 +21,8 @@ public class PartnerServiceImpl implements PartnerService {
 	@Transactional(readOnly = true)
 	// 검색 조건으로 목록 조회
 	// 検索条件でリストを照会
-	public PartnerPage getPartners(String keyword, Integer page, Integer amount) {
-		PartnerSearchCriteria criteria = new PartnerSearchCriteria(keyword, page, amount);
+	public PartnerPage getPartners(String keyword, Integer page, Integer amount, boolean includeInactive) {
+		PartnerSearchCriteria criteria = new PartnerSearchCriteria(keyword, page, amount, includeInactive);
 		return new PartnerPage(mapper.selectPartners(criteria), criteria, mapper.countPartners(criteria));
 	}
 

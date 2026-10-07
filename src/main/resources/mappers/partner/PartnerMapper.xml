@@ -38,6 +38,9 @@
 
 	<!-- 코드, 상호, 사업자번호, 대표자명으로 검색 / コード、商号、事業者番号、代表者名で検索 -->
 	<sql id="searchCondition">
+		<if test="!includeInactive">
+			AND USE_YN = 'Y'
+		</if>
 		<if test="keyword != null and keyword != ''">
 			AND (
 				UPPER(PARTNER_CD) LIKE '%' || UPPER(#{keyword}) || '%'

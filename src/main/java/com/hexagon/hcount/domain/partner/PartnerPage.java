@@ -19,6 +19,7 @@ public class PartnerPage {
 	private final int endPage;
 	private final boolean previous;
 	private final boolean next;
+	private final boolean includeInactive;
 
 	// 전체 건수로 페이지 범위를 계산
 	// 全体件数からページ範囲を計算
@@ -28,9 +29,10 @@ public class PartnerPage {
 		this.page = criteria.getPage();
 		this.amount = criteria.getAmount();
 		this.totalCount = totalCount;
+		this.includeInactive = criteria.isIncludeInactive();
 		this.totalPages = Math.max(1, (int) Math.ceil(totalCount / (double) amount));
-		this.endPage = Math.min(totalPages, ((page - 1) / 10 + 1) * 10);
-		this.startPage = Math.max(1, endPage - 9);
+		this.endPage = Math.min(totalPages, ((page - 1) / 5 + 1) * 5);
+		this.startPage = Math.max(1, endPage - 4);
 		this.previous = startPage > 1;
 		this.next = endPage < totalPages;
 	}

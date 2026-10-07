@@ -8,6 +8,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>거래처리스트</title>
 <jsp:include page="../common/styles.jsp" />
+<style>
+/* 검색 버튼과 같은 크기 / 検索ボタンと同じサイズ */
+.include-inactive-button {
+  height: 36px;
+  padding: 0 20px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: #fff;
+  color: var(--text);
+  white-space: nowrap;
+}
+</style>
 </head>
 <body data-message="${fn:escapeXml(message)}" data-error="${fn:escapeXml(error)}">
 <c:url var="listUrl" value="/basic/partner-list" />
@@ -31,7 +43,9 @@
         <form class="simple-search" method="get" action="${listUrl}" id="searchForm">
           <input type="search" name="q" id="searchInput" value="${fn:escapeXml(q)}"
             placeholder="검색어 입력" aria-label="거래처리스트 검색">
+          <input type="hidden" name="includeInactive" id="includeInactiveInput" value="${includeInactive}">
           <button type="submit" class="primary-button">검색(F3)</button>
+          <button type="button" class="include-inactive-button" id="includeInactiveButton" aria-pressed="${includeInactive}">사용중단포함</button>
         </form>
         <%-- 거래처 목록 / 取引先リスト --%>
         <div class="table-scroll">
@@ -67,24 +81,34 @@
         <nav class="list-pagination" aria-label="페이지 이동">
           <span class="list-pagination-count">총 <c:out value="${partnerPage.totalCount}" />건</span>
           <div class="list-pagination-controls">
-            <c:url var="firstUrl" value="/basic/partner-list"><c:param name="page" value="1"/><c:param name="q" value="${q}"/></c:url>
+            <c:url var="firstUrl" value="/basic/partner-list"><c:param name="page" value="1"/><c:param name="q" value="${q}"/><c:param name="includeInactive" value="${includeInactive}"/></c:url>
             <button type="button" aria-label="첫 페이지" data-page-url="${firstUrl}" ${partnerPage.page le 1 ? 'disabled' : ''}>«</button>
             <c:choose>
               <c:when test="${partnerPage.previous}">
-                <c:url var="previousUrl" value="/basic/partner-list"><c:param name="page" value="${partnerPage.page - 1}"/><c:param name="q" value="${q}"/></c:url>
-                <button type="button" aria-label="이전 페이지" data-page-url="${previousUrl}">‹</button>
+                <c:url var="previousUrl" value="/basic/partner-list"><c:param name="page" value="${partnerPage.startPage - 1}"/><c:param name="q" value="${q}"/><c:param name="includeInactive" value="${includeInactive}"/></c:url>
+                <button type="button" aria-label="이전 페이지 묶음" data-page-url="${previousUrl}">‹</button>
               </c:when>
-              <c:otherwise><button type="button" aria-label="이전 페이지" disabled>‹</button></c:otherwise>
+              <c:otherwise><button type="button" aria-label="이전 페이지 묶음" disabled>‹</button></c:otherwise>
             </c:choose>
-            <span class="list-pagination-current" aria-current="page"><c:out value="${partnerPage.page}" /></span>
+            <c:forEach var="pageNumber" begin="${partnerPage.startPage}" end="${partnerPage.endPage}">
+              <c:choose>
+                <c:when test="${pageNumber eq partnerPage.page}">
+                  <span class="list-pagination-current" aria-current="page"><c:out value="${pageNumber}" /></span>
+                </c:when>
+                <c:otherwise>
+                  <c:url var="pageUrl" value="/basic/partner-list"><c:param name="page" value="${pageNumber}"/><c:param name="q" value="${q}"/><c:param name="includeInactive" value="${includeInactive}"/></c:url>
+                  <button type="button" aria-label="${pageNumber} 페이지" data-page-url="${pageUrl}"><c:out value="${pageNumber}" /></button>
+                </c:otherwise>
+              </c:choose>
+            </c:forEach>
             <c:choose>
               <c:when test="${partnerPage.next}">
-                <c:url var="nextUrl" value="/basic/partner-list"><c:param name="page" value="${partnerPage.page + 1}"/><c:param name="q" value="${q}"/></c:url>
-                <button type="button" aria-label="다음 페이지" data-page-url="${nextUrl}">›</button>
+                <c:url var="nextUrl" value="/basic/partner-list"><c:param name="page" value="${partnerPage.endPage + 1}"/><c:param name="q" value="${q}"/><c:param name="includeInactive" value="${includeInactive}"/></c:url>
+                <button type="button" aria-label="다음 페이지 묶음" data-page-url="${nextUrl}">›</button>
               </c:when>
-              <c:otherwise><button type="button" aria-label="다음 페이지" disabled>›</button></c:otherwise>
+              <c:otherwise><button type="button" aria-label="다음 페이지 묶음" disabled>›</button></c:otherwise>
             </c:choose>
-            <c:url var="lastUrl" value="/basic/partner-list"><c:param name="page" value="${partnerPage.totalPages}"/><c:param name="q" value="${q}"/></c:url>
+            <c:url var="lastUrl" value="/basic/partner-list"><c:param name="page" value="${partnerPage.totalPages}"/><c:param name="q" value="${q}"/><c:param name="includeInactive" value="${includeInactive}"/></c:url>
             <button type="button" aria-label="마지막 페이지" data-page-url="${lastUrl}" ${partnerPage.page ge partnerPage.totalPages ? 'disabled' : ''}>»</button>
           </div>
           <span class="list-pagination-total"><c:out value="${partnerPage.page}" /> / <c:out value="${partnerPage.totalPages}" /> 페이지</span>
@@ -97,6 +121,7 @@
             <input type="hidden" name="partnerId" id="togglePartnerId">
             <input type="hidden" name="q" value="${fn:escapeXml(q)}">
             <input type="hidden" name="page" value="${partnerPage.page}">
+            <input type="hidden" name="includeInactive" value="${includeInactive}">
             <button type="submit" id="toggleButton">사용중단/재사용</button>
           </form>
         </div>
@@ -111,6 +136,7 @@
       <input type="hidden" name="partnerId" value="${editingPartner.partnerId}">
       <input type="hidden" name="q" value="${fn:escapeXml(q)}">
       <input type="hidden" name="page" value="${partnerPage.page}">
+      <input type="hidden" name="includeInactive" value="${includeInactive}">
       <input type="hidden" name="useYn" value="${empty editingPartner.useYn ? 'Y' : editingPartner.useYn}">
       <div class="reference-fields">
         <%-- 부가정보 탭은 제외 / 付加情報タブは除外 --%>
@@ -271,6 +297,9 @@ document.addEventListener("DOMContentLoaded", function () {
   const entryForm = document.querySelector("#entryForm");
   const newButton = document.querySelector("#newButton");
   const editButton = document.querySelector("#editButton");
+  const searchForm = document.querySelector("#searchForm");
+  const includeInactiveInput = document.querySelector("#includeInactiveInput");
+  const includeInactiveButton = document.querySelector("#includeInactiveButton");
   // 한 번에 한 거래처만 선택
   // 一度に一つの取引先だけ選択
   const selectedRows = function () { return Array.from(document.querySelectorAll(".partner-select:checked")); };
@@ -280,6 +309,11 @@ document.addEventListener("DOMContentLoaded", function () {
   const error = document.body.dataset.error;
   if (message) alert(message);
   if (error) alert(error);
+
+  includeInactiveButton.addEventListener("click", function () {
+    includeInactiveInput.value = includeInactiveInput.value === "true" ? "false" : "true";
+    searchForm.requestSubmit();
+  });
 
   document.querySelectorAll(".partner-select").forEach(function (checkbox) {
     checkbox.addEventListener("change", function () {
@@ -295,8 +329,24 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // 신규와 수정 창 열기
   // 新規と修正画面を開く
-  newButton.addEventListener("click", function () { location.href = listUrl + "?mode=new"; });
-  const openEdit = function (id) { location.href = listUrl + "?editId=" + encodeURIComponent(id); };
+  const currentListParams = function () {
+    const params = new URLSearchParams();
+    const keyword = document.querySelector("#searchInput").value.trim();
+    if (keyword) params.set("q", keyword);
+    if (includeInactiveInput.value === "true") params.set("includeInactive", "true");
+    return params;
+  };
+  newButton.addEventListener("click", function () {
+    const params = currentListParams();
+    params.set("mode", "new");
+    location.href = listUrl + "?" + params.toString();
+  });
+  const openEdit = function (id) {
+    const params = currentListParams();
+    params.set("editId", id);
+    params.set("page", "${partnerPage.page}");
+    location.href = listUrl + "?" + params.toString();
+  };
   editButton.addEventListener("click", function () {
     const id = selectedId();
     if (!id) { alert("변경할 거래처를 하나 선택해 주세요."); return; }

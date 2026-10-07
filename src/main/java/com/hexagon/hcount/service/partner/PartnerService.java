@@ -6,7 +6,7 @@ import com.hexagon.hcount.domain.partner.PartnerVO;
 // Controller와 Mapper 사이에서 거래처 기능을 처리
 // ControllerとMapperの間で取引先機能を処理
 public interface PartnerService {
-	PartnerPage getPartners(String keyword, Integer page, Integer amount);
+	PartnerPage getPartners(String keyword, Integer page, Integer amount, boolean includeInactive);
 
 	PartnerVO getPartner(Long partnerId);
 
