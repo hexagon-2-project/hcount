@@ -1,4 +1,99 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.hexagon.hcount.mapper.order.OrderMapper">
+    <!-- DB에서 가져온 값을 OrderListVO에 넣기
+             DBから取得した値をOrderListVOに入れる -->
+    <resultMap id="orderListMap" type="com.hexagon.hcount.domain.order.OrderListVO">
+        <id property="ordId" column="ORD_ID"/>
+        <result property="ordNo" column="ORD_NO"/>
+        <result property="ordDt" column="ORD_DT"/>
+        <result property="dueDt" column="DUE_DT"/>
+        <result property="partnerId" column="PARTNER_ID"/>
+        <result property="partnerCd" column="PARTNER_CD"/>
+        <result property="partnerNm" column="PARTNER_NM"/>
+        <result property="empId" column="EMP_ID"/>
+        <result property="whId" column="WH_ID"/>
+        <result property="itemSummary" column="ITEM_SUMMARY"/>
+        <result property="detailCount" column="DETAIL_COUNT"/>
+        <result property="totAmt" column="TOT_AMT"/>
+        <result property="currCd" column="CURR_CD"/>
+        <result property="status" column="STATUS"/>
+    </resultMap>
+
+    <!-- 목록과 전체 건수에 같은 검색 조건 사용
+             一覧と全件数に同じ検索条件を使う -->
+    <sql id="searchConditions">
+        <where>
+            <if test="startDate != null and startDate != ''">
+                AND o.ORD_DT &gt;= TO_DATE(#{startDate}, 'YYYY-MM-DD')
+            </if>
+            <if test="endDate != null and endDate != ''">
+                AND o.ORD_DT &lt; TO_DATE(#{endDate}, 'YYYY-MM-DD') + 1
+            </if>
+            <if test="partnerId != null">AND o.PARTNER_ID = #{partnerId}</if>
+            <if test="empId != null">AND o.EMP_ID = #{empId}</if>
+            <if test="whId != null">AND o.WH_ID = #{whId}</if>
+            <if test="status != null and status != ''">AND o.STATUS = #{status}</if>
+            <if test="ordNo != null and ordNo != ''">
+                <choose>
+                    <when test="matchType == 'contains'">
+                        AND o.ORD_NO LIKE '%' || #{escapedOrdNo} || '%' ESCAPE '\'
+                    </when>
+                    <otherwise>AND o.ORD_NO = #{ordNo}</otherwise>
+                </choose>
+            </if>
+        </where>
+    </sql>
+
+    <select id="getTotalCount" resultType="long">
+        SELECT COUNT(*) FROM ORD o <include refid="searchConditions"/>
+    </select>
+
+    <!-- 주문서를 정렬한 뒤 현재 페이지의 데이터만 가져오기
+             受注を並べ替えてから現在のページのデータだけ取得する -->
+    <select id="getListWithPaging" resultMap="orderListMap">
+        SELECT page_orders.*, p.PARTNER_CD, p.PARTNER_NM,
+               i.ITEM_NM AS ITEM_SUMMARY, NVL(summary.DETAIL_COUNT, 0) AS DETAIL_COUNT
+        FROM (
+            SELECT numbered.* FROM (
+                SELECT sorted_orders.*, ROWNUM AS RN FROM (
+                    SELECT o.ORD_ID, o.ORD_NO, o.ORD_DT, o.DUE_DT, o.PARTNER_ID,
+                           o.EMP_ID, o.WH_ID, o.TOT_AMT, o.CURR_CD, o.STATUS
+                    FROM ORD o <include refid="searchConditions"/>
+                    ORDER BY o.ORD_DT DESC, o.ORD_ID DESC
+                ) sorted_orders
+                WHERE ROWNUM &lt;= #{limit}
+            ) numbered WHERE numbered.RN &gt; #{offset}
+        ) page_orders
+        LEFT JOIN PARTNER p ON p.PARTNER_ID = page_orders.PARTNER_ID
+        LEFT JOIN (
+            SELECT ORD_ID, MIN(SEQ_NO) AS FIRST_SEQ, COUNT(*) AS DETAIL_COUNT
+            FROM ORD_DTL GROUP BY ORD_ID
+        ) summary ON summary.ORD_ID = page_orders.ORD_ID
+        <!-- 같은 순번에 상세가 여러 개면 하나만 가져오기
+                     同じ順番に明細が複数ある場合は1件だけ取得する -->
+        LEFT JOIN (
+            SELECT ORD_ID, SEQ_NO, MIN(ORD_DTL_ID) AS FIRST_DTL_ID
+            FROM ORD_DTL GROUP BY ORD_ID, SEQ_NO
+        ) first_id ON first_id.ORD_ID = page_orders.ORD_ID AND first_id.SEQ_NO = summary.FIRST_SEQ
+        LEFT JOIN ORD_DTL first_detail ON first_detail.ORD_DTL_ID = first_id.FIRST_DTL_ID
+        LEFT JOIN ITEM i ON i.ITEM_ID = first_detail.ITEM_ID
+        ORDER BY page_orders.ORD_DT DESC, page_orders.ORD_ID DESC
+    </select>
+
+    <!-- 검색할 때 선택할 거래처, 담당자, 창고, 상태 목록
+             検索時に選ぶ取引先、担当者、倉庫、状態のリスト -->
+    <select id="getPartnerOptions" resultType="com.hexagon.hcount.domain.order.OrderSearchOptionVO">
+        SELECT PARTNER_ID AS ID, PARTNER_CD AS CODE, PARTNER_NM AS NAME
+        FROM PARTNER ORDER BY PARTNER_CD, PARTNER_ID
+    </select>
+    <select id="getEmpOptions" resultType="com.hexagon.hcount.domain.order.OrderSearchOptionVO">
+        SELECT EMP_ID AS ID, EMP_CD AS CODE, EMP_NM AS NAME FROM EMP ORDER BY EMP_CD, EMP_ID
+    </select>
+    <select id="getWhOptions" resultType="com.hexagon.hcount.domain.order.OrderSearchOptionVO">
+        SELECT WH_ID AS ID, WH_CD AS CODE, WH_NM AS NAME FROM WH ORDER BY WH_CD, WH_ID
+    </select>
+    <select id="getStatusOptions" resultType="string">
+        SELECT DISTINCT STATUS FROM ORD WHERE STATUS IS NOT NULL ORDER BY STATUS
+    </select>
 </mapper>
