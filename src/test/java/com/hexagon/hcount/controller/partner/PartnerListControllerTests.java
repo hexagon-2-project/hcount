@@ -1,6 +1,6 @@
 package com.hexagon.hcount.controller.partner;
 
-import static org.mockito.ArgumentMatchers.any;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -16,6 +16,7 @@ import java.util.Collections;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.test.web.servlet.MockMvc;
@@ -26,8 +27,6 @@ import com.hexagon.hcount.domain.partner.PartnerSearchCriteria;
 import com.hexagon.hcount.domain.partner.PartnerVO;
 import com.hexagon.hcount.service.partner.PartnerService;
 
-// 실제 DB 없이 Controller 동작 확인
-// 実際のDBなしでController動作を確認
 @RunWith(MockitoJUnitRunner.class)
 public class PartnerListControllerTests {
 	@Mock
@@ -41,8 +40,6 @@ public class PartnerListControllerTests {
 	}
 
 	@Test
-	// 목록 화면 테스트
-	// リスト画面テスト
 	public void listLoadsPartnerPage() throws Exception {
 		PartnerPage page = new PartnerPage(Collections.<PartnerVO>emptyList(), new PartnerSearchCriteria("지호", 1, 20, true), 0);
 		when(service.getPartners("지호", 1, 20, true)).thenReturn(page);
@@ -56,20 +53,19 @@ public class PartnerListControllerTests {
 	}
 
 	@Test
-	// 등록 후 목록 이동 테스트
-	// 登録後のリスト移動テスト
 	public void registerRedirectsToList() throws Exception {
 		mockMvc.perform(post("/basic/partner/register")
-				.param("partnerCode", "HJ001").param("partnerName", "지호상사").param("partnerType", "SALES"))
+				.param("partnerCode", "HJ001").param("partnerName", "지호상사").param("partnerType", "SALES")
+				.param("useYn", "N"))
 				.andExpect(status().is3xxRedirection())
 				.andExpect(redirectedUrl("/basic/partner-list"))
 				.andExpect(flash().attribute("message", "거래처가 등록되었습니다."));
-		verify(service).register(any(PartnerVO.class));
+		ArgumentCaptor<PartnerVO> captor = ArgumentCaptor.forClass(PartnerVO.class);
+		verify(service).register(captor.capture());
+		assertEquals("N", captor.getValue().getUseYn());
 	}
 
 	@Test
-	// 사용상태 변경 후 검색 위치 확인
-	// 使用状態変更後の検索位置を確認
 	public void toggleUseKeepsSearchPosition() throws Exception {
 		when(service.toggleUse(10L)).thenReturn(true);
 		mockMvc.perform(post("/basic/partner/toggle-use")
@@ -79,5 +75,17 @@ public class PartnerListControllerTests {
 				.andExpect(redirectedUrl("/basic/partner-list?q=jiho&page=2&includeInactive=true"))
 				.andExpect(flash().attribute("message", "사용 상태가 변경되었습니다."));
 		verify(service).toggleUse(10L);
+	}
+
+	@Test
+	public void deleteKeepsSearchPosition() throws Exception {
+		when(service.deletePartner(10L)).thenReturn(true);
+		mockMvc.perform(post("/basic/partner/delete")
+				.param("partnerId", "10").param("q", "HJ003").param("page", "2")
+				.param("includeInactive", "true"))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrl("/basic/partner-list?q=HJ003&page=2&includeInactive=true"))
+				.andExpect(flash().attribute("message", "거래처가 삭제되었습니다."));
+		verify(service).deletePartner(10L);
 	}
 }

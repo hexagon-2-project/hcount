@@ -9,7 +9,6 @@
 <title>거래처리스트</title>
 <jsp:include page="../common/styles.jsp" />
 <style>
-/* 검색 버튼과 같은 크기 / 検索ボタンと同じサイズ */
 .include-inactive-button {
   height: 36px;
   padding: 0 20px;
@@ -19,6 +18,12 @@
   color: var(--text);
   white-space: nowrap;
 }
+
+.include-inactive-button:focus,
+.include-inactive-button:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
 </style>
 </head>
 <body data-message="${fn:escapeXml(message)}" data-error="${fn:escapeXml(error)}">
@@ -26,6 +31,7 @@
 <c:url var="registerUrl" value="/basic/partner/register" />
 <c:url var="updateUrl" value="/basic/partner/update" />
 <c:url var="toggleUrl" value="/basic/partner/toggle-use" />
+<c:url var="deleteUrl" value="/basic/partner/delete" />
 <c:choose>
   <c:when test="${not empty editingPartner}"><c:set var="entryAction" value="${updateUrl}" /></c:when>
   <c:otherwise><c:set var="entryAction" value="${registerUrl}" /></c:otherwise>
@@ -39,7 +45,6 @@
         <h1>거래처리스트</h1>
       </header>
       <section class="screen-content simple-page">
-        <%-- 거래처 검색 / 取引先検索 --%>
         <form class="simple-search" method="get" action="${listUrl}" id="searchForm">
           <input type="search" name="q" id="searchInput" value="${fn:escapeXml(q)}"
             placeholder="검색어 입력" aria-label="거래처리스트 검색">
@@ -47,7 +52,6 @@
           <button type="submit" class="primary-button">검색(F3)</button>
           <button type="button" class="include-inactive-button" id="includeInactiveButton" aria-pressed="${includeInactive}">사용중단포함</button>
         </form>
-        <%-- 거래처 목록 / 取引先リスト --%>
         <div class="table-scroll">
           <table class="list-table">
             <thead>
@@ -57,6 +61,7 @@
                 <th>상호(이름)</th>
                 <th>사업자등록번호</th>
                 <th>대표자</th>
+                <th>사용상태</th>
                 <th>수정</th>
               </tr>
             </thead>
@@ -68,16 +73,16 @@
                   <td><c:out value="${partner.partnerName}" /></td>
                   <td><c:out value="${partner.bizNo}" /></td>
                   <td><c:out value="${partner.ceoName}" /></td>
+                  <td><c:choose><c:when test="${partner.useYn eq 'N'}">사용중단</c:when><c:otherwise>사용</c:otherwise></c:choose></td>
                   <td><button type="button" class="row-edit-button" data-edit-id="${partner.partnerId}">수정</button></td>
                 </tr>
               </c:forEach>
               <c:if test="${empty partnerPage.partners}">
-                <tr><td colspan="6">등록된 데이터가 없습니다.</td></tr>
+                <tr><td colspan="7">등록된 데이터가 없습니다.</td></tr>
               </c:if>
             </tbody>
           </table>
         </div>
-        <%-- 페이지 이동 / ページ移動 --%>
         <nav class="list-pagination" aria-label="페이지 이동">
           <span class="list-pagination-count">총 <c:out value="${partnerPage.totalCount}" />건</span>
           <div class="list-pagination-controls">
@@ -113,7 +118,6 @@
           </div>
           <span class="list-pagination-total"><c:out value="${partnerPage.page}" /> / <c:out value="${partnerPage.totalPages}" /> 페이지</span>
         </nav>
-        <%-- 목록에서 사용할 버튼만 남김 / リストで使うボタンだけ残す --%>
         <div class="list-footer-actions" role="group" aria-label="목록 작업">
           <button type="button" id="newButton">신규(F2)</button>
           <button type="button" id="editButton">변경</button>
@@ -124,12 +128,18 @@
             <input type="hidden" name="includeInactive" value="${includeInactive}">
             <button type="submit" id="toggleButton">사용중단/재사용</button>
           </form>
+          <form action="${deleteUrl}" method="post" id="deleteForm" style="display:inline">
+            <input type="hidden" name="partnerId" id="deletePartnerId">
+            <input type="hidden" name="q" value="${fn:escapeXml(q)}">
+            <input type="hidden" name="page" value="${partnerPage.page}">
+            <input type="hidden" name="includeInactive" value="${includeInactive}">
+            <button type="submit">삭제</button>
+          </form>
         </div>
       </section>
     </main>
   </div>
 
-  <%-- 기존 등록창 디자인 유지 / 既存の登録画面デザインを維持 --%>
   <dialog id="entryDialog" class="simple-dialog reference-dialog" aria-labelledby="entryTitle">
     <form id="entryForm" method="post" action="${entryAction}" novalidate>
       <h2 id="entryTitle"><c:choose><c:when test="${not empty editingPartner}">거래처수정</c:when><c:otherwise>거래처등록</c:otherwise></c:choose></h2>
@@ -137,9 +147,7 @@
       <input type="hidden" name="q" value="${fn:escapeXml(q)}">
       <input type="hidden" name="page" value="${partnerPage.page}">
       <input type="hidden" name="includeInactive" value="${includeInactive}">
-      <input type="hidden" name="useYn" value="${empty editingPartner.useYn ? 'Y' : editingPartner.useYn}">
       <div class="reference-fields">
-        <%-- 부가정보 탭은 제외 / 付加情報タブは除外 --%>
         <div class="master-entry-tabs" role="tablist">
           <button type="button" role="tab" data-entry-tab="A1" aria-controls="panel-A1" aria-selected="true" class="active">기본</button>
           <button type="button" role="tab" data-entry-tab="A2" aria-controls="panel-A2" aria-selected="false">거래처정보</button>
@@ -226,6 +234,13 @@
                 <option value="PURCHASE" ${editingPartner.partnerType eq 'PURCHASE' ? 'selected' : ''}>매입처</option>
                 <option value="BOTH" ${editingPartner.partnerType eq 'BOTH' ? 'selected' : ''}>겸용</option>
               </select>
+            </div></div></div>
+          </div>
+          <div class="reference-row" data-reference-label="사용형태">
+            <div class="reference-label">사용형태</div>
+            <div class="reference-control"><div class="control-set"><div class="control">
+              <span class="form-radio"><input type="radio" id="partnerUseYnYes" name="useYn" value="Y" ${empty editingPartner.useYn or editingPartner.useYn eq 'Y' ? 'checked' : ''}><label for="partnerUseYnYes">사용</label></span>
+              <span class="form-radio"><input type="radio" id="partnerUseYnNo" name="useYn" value="N" ${editingPartner.useYn eq 'N' ? 'checked' : ''}><label for="partnerUseYnNo">사용중단</label></span>
             </div></div></div>
           </div>
           <div class="reference-row" data-reference-label="거래처 담당자">
@@ -327,8 +342,6 @@ document.addEventListener("DOMContentLoaded", function () {
     if (selectAllRows.checked && first) first.checked = true;
   });
 
-  // 신규와 수정 창 열기
-  // 新規と修正画面を開く
   const currentListParams = function () {
     const params = new URLSearchParams();
     const keyword = document.querySelector("#searchInput").value.trim();
@@ -359,12 +372,19 @@ document.addEventListener("DOMContentLoaded", function () {
     button.addEventListener("click", function () { if (button.dataset.pageUrl) location.href = button.dataset.pageUrl; });
   });
 
-  // 선택한 거래처의 사용상태 변경
-  // 選択した取引先の使用状態を変更
   document.querySelector("#toggleForm").addEventListener("submit", function (event) {
     const id = selectedId();
     if (!id) { event.preventDefault(); alert("사용 상태를 변경할 거래처를 하나 선택해 주세요."); return; }
     document.querySelector("#togglePartnerId").value = id;
+  });
+
+  // 선택한 거래처는 DB에서 지우지 않고 삭제상태로 바꾼다
+  // 選択した取引先はDBから削除せず削除状態に変更する
+  document.querySelector("#deleteForm").addEventListener("submit", function (event) {
+    const id = selectedId();
+    if (!id) { event.preventDefault(); alert("삭제할 거래처를 하나 선택해 주세요."); return; }
+    if (!confirm("선택한 거래처를 삭제하시겠습니까?")) { event.preventDefault(); return; }
+    document.querySelector("#deletePartnerId").value = id;
   });
 
   document.querySelector("#entryCloseButton").addEventListener("click", function () { entryDialog.close(); });
@@ -377,8 +397,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // 등록창 탭 이동
-  // 登録画面のタブ移動
   const tabs = Array.from(document.querySelectorAll("#entryForm [data-entry-tab]"));
   tabs.forEach(function (tab) {
     tab.addEventListener("click", function () {

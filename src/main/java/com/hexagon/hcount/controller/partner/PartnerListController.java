@@ -20,8 +20,6 @@ public class PartnerListController {
 	private final PartnerService service;
 
 	@GetMapping("/basic/partner-list")
-	// 거래처 목록 화면 열기
-	// 取引先リスト画面を開く
 	public String page(@RequestParam(value = "q", required = false) String keyword,
 			@RequestParam(value = "page", required = false) Integer page,
 			@RequestParam(value = "editId", required = false) Long editId,
@@ -42,8 +40,6 @@ public class PartnerListController {
 	}
 
 	@PostMapping("/basic/partner/register")
-	// 신규 거래처 저장
-	// 新しい取引先を保存
 	public String register(@ModelAttribute PartnerVO partner, @RequestParam(value = "q", required = false) String keyword,
 			@RequestParam(value = "page", required = false) Integer page,
 			@RequestParam(value = "includeInactive", defaultValue = "false") boolean includeInactive,
@@ -59,8 +55,6 @@ public class PartnerListController {
 	}
 
 	@PostMapping("/basic/partner/update")
-	// 선택한 거래처 수정
-	// 選択した取引先を修正
 	public String update(@ModelAttribute PartnerVO partner, @RequestParam(value = "q", required = false) String keyword,
 			@RequestParam(value = "page", required = false) Integer page,
 			@RequestParam(value = "includeInactive", defaultValue = "false") boolean includeInactive,
@@ -79,8 +73,6 @@ public class PartnerListController {
 	}
 
 	@PostMapping("/basic/partner/toggle-use")
-	// 사용중단 또는 재사용 처리
-	// 使用停止または再使用を処理
 	public String toggleUse(@RequestParam("partnerId") Long partnerId,
 			@RequestParam(value = "q", required = false) String keyword,
 			@RequestParam(value = "page", required = false) Integer page,
@@ -90,6 +82,21 @@ public class PartnerListController {
 			redirectAttributes.addFlashAttribute("message", "사용 상태가 변경되었습니다.");
 		} else {
 			redirectAttributes.addFlashAttribute("error", "변경할 거래처를 찾지 못했습니다.");
+		}
+		addListParameters(redirectAttributes, keyword, page, includeInactive);
+		return "redirect:/basic/partner-list";
+	}
+
+	@PostMapping("/basic/partner/delete")
+	public String delete(@RequestParam("partnerId") Long partnerId,
+			@RequestParam(value = "q", required = false) String keyword,
+			@RequestParam(value = "page", required = false) Integer page,
+			@RequestParam(value = "includeInactive", defaultValue = "false") boolean includeInactive,
+			RedirectAttributes redirectAttributes) {
+		if (service.deletePartner(partnerId)) {
+			redirectAttributes.addFlashAttribute("message", "거래처가 삭제되었습니다.");
+		} else {
+			redirectAttributes.addFlashAttribute("error", "삭제할 거래처를 찾지 못했습니다.");
 		}
 		addListParameters(redirectAttributes, keyword, page, includeInactive);
 		return "redirect:/basic/partner-list";
