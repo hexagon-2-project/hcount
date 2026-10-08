@@ -47,6 +47,19 @@ public class PartnerServiceTests {
 		assertEquals(120, result.getTotalCount());
 		assertEquals(5, result.getEndPage());
 		assertTrue(result.isIncludeInactive());
+		assertEquals("code", result.getSortBy());
+		assertEquals("asc", result.getSortDirection());
+	}
+
+	@Test
+	public void getPartnersKeepsAllowedSortCondition() {
+		when(mapper.selectPartners(any(PartnerSearchCriteria.class))).thenReturn(Arrays.<PartnerVO>asList());
+		when(mapper.countPartners(any(PartnerSearchCriteria.class))).thenReturn(0);
+
+		PartnerPage result = service.getPartners("황지호", 1, 20, false, "ceo", "desc");
+
+		assertEquals("ceo", result.getSortBy());
+		assertEquals("desc", result.getSortDirection());
 	}
 
 	@Test

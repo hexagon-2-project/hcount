@@ -10,6 +10,7 @@ import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.session.Configuration;
 import org.junit.Test;
 
+import com.hexagon.hcount.domain.warehouse.WarehouseSearchCriteria;
 import com.hexagon.hcount.domain.warehouse.WarehouseVO;
 
 public class WarehouseMapperXmlTests {
@@ -33,9 +34,12 @@ public class WarehouseMapperXmlTests {
 				.getBoundSql(new WarehouseVO());
 		BoundSql updateSql = configuration.getMappedStatement(namespace + "updateWarehouse")
 				.getBoundSql(new WarehouseVO());
+		BoundSql listSql = configuration.getMappedStatement(namespace + "selectWarehouses")
+				.getBoundSql(new WarehouseSearchCriteria(null, 1, 20, true, "name", "desc"));
 		assertTrue(insertSql.getParameterMappings().stream()
 				.anyMatch(parameter -> "useYn".equals(parameter.getProperty())));
 		assertTrue(updateSql.getParameterMappings().stream()
 				.anyMatch(parameter -> "useYn".equals(parameter.getProperty())));
+		assertTrue(listSql.getSql().replaceAll("\\s+", " ").contains("ORDER BY W.WH_NM DESC"));
 	}
 }

@@ -21,7 +21,14 @@ public class WarehouseService {
 	// 목록과 전체 건수를 같은 검색 조건으로 조회한다
 	// リストと全件数を同じ検索条件で照会する
 	public WarehousePage getWarehouses(String keyword, Integer page, Integer amount, boolean includeInactive) {
-		WarehouseSearchCriteria criteria = new WarehouseSearchCriteria(keyword, page, amount, includeInactive);
+		return getWarehouses(keyword, page, amount, includeInactive, "code", "asc");
+	}
+
+	@Transactional(readOnly = true)
+	public WarehousePage getWarehouses(String keyword, Integer page, Integer amount, boolean includeInactive,
+			String sortBy, String sortDirection) {
+		WarehouseSearchCriteria criteria = new WarehouseSearchCriteria(keyword, page, amount, includeInactive,
+				sortBy, sortDirection);
 		return new WarehousePage(mapper.selectWarehouses(criteria), criteria, mapper.countWarehouses(criteria));
 	}
 

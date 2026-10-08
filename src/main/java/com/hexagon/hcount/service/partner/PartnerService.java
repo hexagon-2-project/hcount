@@ -6,6 +6,9 @@ import com.hexagon.hcount.domain.partner.PartnerVO;
 public interface PartnerService {
 	PartnerPage getPartners(String keyword, Integer page, Integer amount, boolean includeInactive);
 
+	PartnerPage getPartners(String keyword, Integer page, Integer amount, boolean includeInactive,
+			String sortBy, String sortDirection);
+
 	PartnerVO getPartner(Long partnerId);
 
 	void register(PartnerVO partner);

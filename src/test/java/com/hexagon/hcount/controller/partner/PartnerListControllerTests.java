@@ -41,15 +41,18 @@ public class PartnerListControllerTests {
 
 	@Test
 	public void listLoadsPartnerPage() throws Exception {
-		PartnerPage page = new PartnerPage(Collections.<PartnerVO>emptyList(), new PartnerSearchCriteria("지호", 1, 20, true), 0);
-		when(service.getPartners("지호", 1, 20, true)).thenReturn(page);
+		PartnerPage page = new PartnerPage(Collections.<PartnerVO>emptyList(),
+				new PartnerSearchCriteria("지호", 1, 20, true, "name", "desc"), 0);
+		when(service.getPartners("지호", 1, 20, true, "name", "desc")).thenReturn(page);
 
-		mockMvc.perform(get("/basic/partner-list").param("q", "지호").param("page", "1").param("includeInactive", "true"))
+		mockMvc.perform(get("/basic/partner-list").param("q", "지호").param("page", "1")
+				.param("includeInactive", "true").param("sortBy", "name").param("sortDirection", "desc"))
 				.andExpect(status().isOk())
 				.andExpect(view().name("basic/partner-list"))
 				.andExpect(model().attribute("partnerPage", page))
 				.andExpect(model().attribute("q", "지호"))
 				.andExpect(model().attribute("includeInactive", true));
+		verify(service).getPartners("지호", 1, 20, true, "name", "desc");
 	}
 
 	@Test
@@ -70,9 +73,9 @@ public class PartnerListControllerTests {
 		when(service.toggleUse(10L)).thenReturn(true);
 		mockMvc.perform(post("/basic/partner/toggle-use")
 				.param("partnerId", "10").param("q", "jiho").param("page", "2")
-				.param("includeInactive", "true"))
+				.param("includeInactive", "true").param("sortBy", "name").param("sortDirection", "desc"))
 				.andExpect(status().is3xxRedirection())
-				.andExpect(redirectedUrl("/basic/partner-list?q=jiho&page=2&includeInactive=true"))
+				.andExpect(redirectedUrl("/basic/partner-list?q=jiho&page=2&includeInactive=true&sortBy=name&sortDirection=desc"))
 				.andExpect(flash().attribute("message", "사용 상태가 변경되었습니다."));
 		verify(service).toggleUse(10L);
 	}

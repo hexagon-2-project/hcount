@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.hexagon.hcount.domain.warehouse.WarehousePage;
+import com.hexagon.hcount.domain.warehouse.WarehouseSearchCriteria;
 import com.hexagon.hcount.domain.warehouse.WarehouseVO;
 import com.hexagon.hcount.service.warehouse.WarehouseService;
 
@@ -26,8 +27,10 @@ public class WarehouseListController {
 			@RequestParam(value = "page", required = false) Integer page,
 			@RequestParam(value = "editId", required = false) Long editId,
 			@RequestParam(value = "mode", required = false) String mode,
-			@RequestParam(value = "includeInactive", defaultValue = "false") boolean includeInactive, Model model) {
-		WarehousePage warehousePage = service.getWarehouses(keyword, page, 20, includeInactive);
+			@RequestParam(value = "includeInactive", defaultValue = "false") boolean includeInactive,
+			@RequestParam(value = "sortBy", defaultValue = "code") String sortBy,
+			@RequestParam(value = "sortDirection", defaultValue = "asc") String sortDirection, Model model) {
+		WarehousePage warehousePage = service.getWarehouses(keyword, page, 20, includeInactive, sortBy, sortDirection);
 		model.addAttribute("warehousePage", warehousePage);
 		model.addAttribute("q", warehousePage.getKeyword());
 		model.addAttribute("includeInactive", warehousePage.isIncludeInactive());
@@ -46,6 +49,8 @@ public class WarehouseListController {
 			@RequestParam(value = "q", required = false) String keyword,
 			@RequestParam(value = "page", required = false) Integer page,
 			@RequestParam(value = "includeInactive", defaultValue = "false") boolean includeInactive,
+			@RequestParam(value = "sortBy", defaultValue = "code") String sortBy,
+			@RequestParam(value = "sortDirection", defaultValue = "asc") String sortDirection,
 			RedirectAttributes redirectAttributes) {
 		try {
 			service.register(warehouse);
@@ -53,7 +58,7 @@ public class WarehouseListController {
 		} catch (IllegalArgumentException | IllegalStateException exception) {
 			redirectAttributes.addFlashAttribute("error", exception.getMessage());
 		}
-		addListParameters(redirectAttributes, keyword, page, includeInactive);
+		addListParameters(redirectAttributes, keyword, page, includeInactive, sortBy, sortDirection);
 		return "redirect:/basic/warehouse-list";
 	}
 
@@ -62,6 +67,8 @@ public class WarehouseListController {
 			@RequestParam(value = "q", required = false) String keyword,
 			@RequestParam(value = "page", required = false) Integer page,
 			@RequestParam(value = "includeInactive", defaultValue = "false") boolean includeInactive,
+			@RequestParam(value = "sortBy", defaultValue = "code") String sortBy,
+			@RequestParam(value = "sortDirection", defaultValue = "asc") String sortDirection,
 			RedirectAttributes redirectAttributes) {
 		try {
 			if (service.modify(warehouse)) {
@@ -72,7 +79,7 @@ public class WarehouseListController {
 		} catch (IllegalArgumentException exception) {
 			redirectAttributes.addFlashAttribute("error", exception.getMessage());
 		}
-		addListParameters(redirectAttributes, keyword, page, includeInactive);
+		addListParameters(redirectAttributes, keyword, page, includeInactive, sortBy, sortDirection);
 		return "redirect:/basic/warehouse-list";
 	}
 
@@ -81,20 +88,22 @@ public class WarehouseListController {
 			@RequestParam(value = "q", required = false) String keyword,
 			@RequestParam(value = "page", required = false) Integer page,
 			@RequestParam(value = "includeInactive", defaultValue = "false") boolean includeInactive,
+			@RequestParam(value = "sortBy", defaultValue = "code") String sortBy,
+			@RequestParam(value = "sortDirection", defaultValue = "asc") String sortDirection,
 			RedirectAttributes redirectAttributes) {
 		if (service.toggleUse(warehouseId)) {
 			redirectAttributes.addFlashAttribute("message", "사용 상태가 변경되었습니다.");
 		} else {
 			redirectAttributes.addFlashAttribute("error", "변경할 창고를 찾지 못했습니다.");
 		}
-		addListParameters(redirectAttributes, keyword, page, includeInactive);
+		addListParameters(redirectAttributes, keyword, page, includeInactive, sortBy, sortDirection);
 		return "redirect:/basic/warehouse-list";
 	}
 
 	// 처리 후에도 검색 위치 유지
 	// 処理後も検索位置を維持
 	private void addListParameters(RedirectAttributes redirectAttributes, String keyword, Integer page,
-			boolean includeInactive) {
+			boolean includeInactive, String sortBy, String sortDirection) {
 		if (keyword != null && !keyword.trim().isEmpty()) {
 			redirectAttributes.addAttribute("q", keyword.trim());
 		}
@@ -103,6 +112,13 @@ public class WarehouseListController {
 		}
 		if (includeInactive) {
 			redirectAttributes.addAttribute("includeInactive", true);
+		}
+		WarehouseSearchCriteria criteria = new WarehouseSearchCriteria(null, 1, 20, false, sortBy, sortDirection);
+		if (!"code".equals(criteria.getSortBy())) {
+			redirectAttributes.addAttribute("sortBy", criteria.getSortBy());
+		}
+		if (!"asc".equals(criteria.getSortDirection())) {
+			redirectAttributes.addAttribute("sortDirection", criteria.getSortDirection());
 		}
 	}
 }

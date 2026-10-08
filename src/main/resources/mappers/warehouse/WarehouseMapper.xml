@@ -32,7 +32,17 @@
 	<select id="selectWarehouses" resultMap="warehouseMap">
 		SELECT <include refid="warehouseColumns" />
 		FROM (
-			SELECT W.*, ROW_NUMBER() OVER (ORDER BY W.WH_ID DESC) AS RN
+			SELECT W.*, ROW_NUMBER() OVER (ORDER BY
+				<choose>
+					<when test="sortBy == 'name'">W.WH_NM</when>
+					<when test="sortBy == 'type'">W.WH_TP</when>
+					<when test="sortBy == 'status'">W.USE_YN</when>
+					<otherwise>W.WH_CD</otherwise>
+				</choose>
+				<choose>
+					<when test="sortDirection == 'desc'">DESC</when>
+					<otherwise>ASC</otherwise>
+				</choose>, W.WH_ID DESC) AS RN
 			FROM WH W
 			WHERE 1 = 1
 			<include refid="searchCondition" />

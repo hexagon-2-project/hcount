@@ -22,7 +22,15 @@ public class PartnerServiceImpl implements PartnerService {
 	// 검색 조건으로 목록 조회
 	// 検索条件でリストを照会
 	public PartnerPage getPartners(String keyword, Integer page, Integer amount, boolean includeInactive) {
-		PartnerSearchCriteria criteria = new PartnerSearchCriteria(keyword, page, amount, includeInactive);
+		return getPartners(keyword, page, amount, includeInactive, "code", "asc");
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public PartnerPage getPartners(String keyword, Integer page, Integer amount, boolean includeInactive,
+			String sortBy, String sortDirection) {
+		PartnerSearchCriteria criteria = new PartnerSearchCriteria(keyword, page, amount, includeInactive,
+				sortBy, sortDirection);
 		return new PartnerPage(mapper.selectPartners(criteria), criteria, mapper.countPartners(criteria));
 	}
 

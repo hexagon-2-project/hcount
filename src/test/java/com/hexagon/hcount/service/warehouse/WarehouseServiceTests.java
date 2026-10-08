@@ -39,7 +39,7 @@ public class WarehouseServiceTests {
 		when(mapper.selectWarehouses(any(WarehouseSearchCriteria.class))).thenReturn(Arrays.asList(warehouse));
 		when(mapper.countWarehouses(any(WarehouseSearchCriteria.class))).thenReturn(60);
 
-		WarehousePage result = service.getWarehouses("  지호  ", 0, 500, true);
+		WarehousePage result = service.getWarehouses("  지호  ", 0, 500, true, "name", "desc");
 
 		assertEquals("지호", result.getKeyword());
 		assertEquals(1, result.getPage());
@@ -47,6 +47,19 @@ public class WarehouseServiceTests {
 		assertEquals(60, result.getTotalCount());
 		assertEquals(3, result.getEndPage());
 		assertTrue(result.isIncludeInactive());
+		assertEquals("name", result.getSortBy());
+		assertEquals("desc", result.getSortDirection());
+	}
+
+	@Test
+	public void getWarehousesUsesSafeSortDefaults() {
+		when(mapper.selectWarehouses(any(WarehouseSearchCriteria.class))).thenReturn(Arrays.<WarehouseVO>asList());
+		when(mapper.countWarehouses(any(WarehouseSearchCriteria.class))).thenReturn(0);
+
+		WarehousePage result = service.getWarehouses(null, 1, 20, false, "WH_ID DESC", "sideways");
+
+		assertEquals("code", result.getSortBy());
+		assertEquals("asc", result.getSortDirection());
 	}
 
 	@Test

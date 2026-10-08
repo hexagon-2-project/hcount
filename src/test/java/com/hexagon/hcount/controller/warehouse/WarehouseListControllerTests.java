@@ -42,16 +42,17 @@ public class WarehouseListControllerTests {
 	@Test
 	public void listLoadsWarehousePage() throws Exception {
 		WarehousePage page = new WarehousePage(Collections.<WarehouseVO>emptyList(),
-				new WarehouseSearchCriteria("지호", 1, 20, true), 0);
-		when(service.getWarehouses("지호", 1, 20, true)).thenReturn(page);
+				new WarehouseSearchCriteria("지호", 1, 20, true, "name", "desc"), 0);
+		when(service.getWarehouses("지호", 1, 20, true, "name", "desc")).thenReturn(page);
 
 		mockMvc.perform(get("/basic/warehouse-list").param("q", "지호").param("page", "1")
-				.param("includeInactive", "true"))
+				.param("includeInactive", "true").param("sortBy", "name").param("sortDirection", "desc"))
 				.andExpect(status().isOk())
 				.andExpect(view().name("basic/warehouse-list"))
 				.andExpect(model().attribute("warehousePage", page))
 				.andExpect(model().attribute("q", "지호"))
 				.andExpect(model().attribute("includeInactive", true));
+		verify(service).getWarehouses("지호", 1, 20, true, "name", "desc");
 	}
 
 	@Test
@@ -70,9 +71,10 @@ public class WarehouseListControllerTests {
 	public void toggleUseKeepsSearchPosition() throws Exception {
 		when(service.toggleUse(10L)).thenReturn(true);
 		mockMvc.perform(post("/basic/warehouse/toggle-use").param("warehouseId", "10")
-				.param("q", "HJ-WH").param("page", "2").param("includeInactive", "true"))
+				.param("q", "HJ-WH").param("page", "2").param("includeInactive", "true")
+				.param("sortBy", "name").param("sortDirection", "desc"))
 				.andExpect(status().is3xxRedirection())
-				.andExpect(redirectedUrl("/basic/warehouse-list?q=HJ-WH&page=2&includeInactive=true"))
+				.andExpect(redirectedUrl("/basic/warehouse-list?q=HJ-WH&page=2&includeInactive=true&sortBy=name&sortDirection=desc"))
 				.andExpect(flash().attribute("message", "사용 상태가 변경되었습니다."));
 		verify(service).toggleUse(10L);
 	}

@@ -57,7 +57,18 @@
 	<select id="selectPartners" resultMap="partnerMap">
 		SELECT <include refid="partnerColumns" />
 		FROM (
-			SELECT P.*, ROW_NUMBER() OVER (ORDER BY P.PARTNER_ID DESC) AS RN
+			SELECT P.*, ROW_NUMBER() OVER (ORDER BY
+				<choose>
+					<when test="sortBy == 'name'">P.PARTNER_NM</when>
+					<when test="sortBy == 'bizNo'">P.BIZ_NO</when>
+					<when test="sortBy == 'ceo'">P.CEO_NM</when>
+					<when test="sortBy == 'status'">P.USE_YN</when>
+					<otherwise>P.PARTNER_CD</otherwise>
+				</choose>
+				<choose>
+					<when test="sortDirection == 'desc'">DESC</when>
+					<otherwise>ASC</otherwise>
+				</choose>, P.PARTNER_ID DESC) AS RN
 			FROM PARTNER P
 			WHERE 1 = 1
 			<include refid="searchCondition" />

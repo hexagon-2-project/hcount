@@ -20,6 +20,8 @@ public class WarehousePage {
 	private final boolean previous;
 	private final boolean next;
 	private final boolean includeInactive;
+	private final String sortBy;
+	private final String sortDirection;
 
 	public WarehousePage(List<WarehouseVO> warehouses, WarehouseSearchCriteria criteria, int totalCount) {
 		this.warehouses = warehouses == null ? Collections.<WarehouseVO>emptyList() : warehouses;
@@ -33,5 +35,7 @@ public class WarehousePage {
 		this.previous = startPage > 1;
 		this.next = endPage < totalPages;
 		this.includeInactive = criteria.isIncludeInactive();
+		this.sortBy = criteria.getSortBy();
+		this.sortDirection = criteria.getSortDirection();
 	}
 }

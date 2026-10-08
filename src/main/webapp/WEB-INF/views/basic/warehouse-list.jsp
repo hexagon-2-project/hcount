@@ -9,20 +9,70 @@
 <title>창고등록리스트</title>
 <jsp:include page="../common/styles.jsp" />
 <style>
-.include-inactive-button {
+.simple-search .include-inactive-button {
 	height: 36px;
 	padding: 0 20px;
-	border: 1px solid var(--line);
+	border: 1px solid #dce2ea !important;
 	border-radius: 0;
-	background: #fff;
-	color: var(--text);
+	outline: 0;
+	background: #fff !important;
+	box-shadow: none;
+	color: #10204a !important;
 	white-space: nowrap;
+	appearance: none;
 }
 
-.include-inactive-button:focus,
-.include-inactive-button:focus-visible {
-	outline: none;
+.simple-search .include-inactive-button:hover, .simple-search .include-inactive-button:focus,
+	.simple-search .include-inactive-button:focus-visible, .simple-search .include-inactive-button:active
+	{
+	border: 1px solid #dce2ea !important;
+	outline: 0;
+	background: #fff !important;
 	box-shadow: none;
+	color: #10204a !important;
+}
+
+.simple-page .list-table th>.list-sort-button {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	width: auto;
+	min-width: 0;
+	height: auto;
+	min-height: 0;
+	margin: 0;
+	padding: 0 !important;
+	border: 0 !important;
+	border-radius: 0;
+	outline: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	color: #123b8f;
+	font: inherit;
+	font-weight: 600;
+	line-height: 1;
+	cursor: pointer;
+	appearance: none;
+}
+
+.simple-page .list-table th>.list-sort-button:hover, .simple-page .list-table th>.list-sort-button:focus,
+	.simple-page .list-table th>.list-sort-button:focus-visible,
+	.simple-page .list-table th>.list-sort-button:active {
+	padding: 0 !important;
+	border: 0 !important;
+	outline: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	color: #123b8f;
+}
+
+.sort-arrow {
+	display: inline-block;
+	width: 0;
+	height: 0;
+	border-left: 5px solid transparent;
+	border-right: 5px solid transparent;
+	border-top: 6px solid currentColor;
 }
 </style>
 </head>
@@ -56,7 +106,10 @@
 							value="${fn:escapeXml(q)}" placeholder="검색어 입력"
 							aria-label="창고등록리스트 검색"> <input type="hidden"
 							name="includeInactive" id="includeInactiveInput"
-							value="${includeInactive}">
+							value="${includeInactive}"> <input type="hidden"
+							name="sortBy" id="sortByInput" value="${warehousePage.sortBy}">
+						<input type="hidden" name="sortDirection" id="sortDirectionInput"
+							value="${warehousePage.sortDirection}">
 						<button type="submit" class="primary-button">검색(F3)</button>
 						<button type="button" class="include-inactive-button"
 							id="includeInactiveButton" aria-pressed="${includeInactive}">사용중단포함</button>
@@ -67,10 +120,22 @@
 								<tr>
 									<th class="selection-column"><input type="checkbox"
 										class="list-row-select" id="selectAllRows" aria-label="전체 선택"></th>
-									<th>창고코드</th>
-									<th>창고명</th>
-									<th>구분</th>
-									<th>사용상태</th>
+									<th><button type="button" class="list-sort-button"
+											data-sort-by="code">
+											창고코드<span class="sort-arrow"></span>
+										</button></th>
+									<th><button type="button" class="list-sort-button"
+											data-sort-by="name">
+											창고명<span class="sort-arrow"></span>
+										</button></th>
+									<th><button type="button" class="list-sort-button"
+											data-sort-by="type">
+											구분<span class="sort-arrow"></span>
+										</button></th>
+									<th><button type="button" class="list-sort-button"
+											data-sort-by="status">
+											사용상태<span class="sort-arrow"></span>
+										</button></th>
 									<th>수정</th>
 								</tr>
 							</thead>
@@ -112,6 +177,9 @@
 								<c:param name="page" value="1" />
 								<c:param name="q" value="${q}" />
 								<c:param name="includeInactive" value="${includeInactive}" />
+								<c:param name="sortBy" value="${warehousePage.sortBy}" />
+								<c:param name="sortDirection"
+									value="${warehousePage.sortDirection}" />
 							</c:url>
 							<button type="button" aria-label="첫 페이지"
 								data-page-url="${firstUrl}"
@@ -122,6 +190,9 @@
 										<c:param name="page" value="${warehousePage.startPage - 1}" />
 										<c:param name="q" value="${q}" />
 										<c:param name="includeInactive" value="${includeInactive}" />
+										<c:param name="sortBy" value="${warehousePage.sortBy}" />
+										<c:param name="sortDirection"
+											value="${warehousePage.sortDirection}" />
 									</c:url>
 									<button type="button" aria-label="이전 페이지 묶음"
 										data-page-url="${previousUrl}">‹</button>
@@ -142,6 +213,9 @@
 											<c:param name="page" value="${pageNumber}" />
 											<c:param name="q" value="${q}" />
 											<c:param name="includeInactive" value="${includeInactive}" />
+											<c:param name="sortBy" value="${warehousePage.sortBy}" />
+											<c:param name="sortDirection"
+												value="${warehousePage.sortDirection}" />
 										</c:url>
 										<button type="button" aria-label="${pageNumber} 페이지"
 											data-page-url="${pageUrl}">
@@ -156,6 +230,9 @@
 										<c:param name="page" value="${warehousePage.endPage + 1}" />
 										<c:param name="q" value="${q}" />
 										<c:param name="includeInactive" value="${includeInactive}" />
+										<c:param name="sortBy" value="${warehousePage.sortBy}" />
+										<c:param name="sortDirection"
+											value="${warehousePage.sortDirection}" />
 									</c:url>
 									<button type="button" aria-label="다음 페이지 묶음"
 										data-page-url="${nextUrl}">›</button>
@@ -168,6 +245,9 @@
 								<c:param name="page" value="${warehousePage.totalPages}" />
 								<c:param name="q" value="${q}" />
 								<c:param name="includeInactive" value="${includeInactive}" />
+								<c:param name="sortBy" value="${warehousePage.sortBy}" />
+								<c:param name="sortDirection"
+									value="${warehousePage.sortDirection}" />
 							</c:url>
 							<button type="button" aria-label="마지막 페이지"
 								data-page-url="${lastUrl}"
@@ -186,7 +266,10 @@
 							<input type="hidden" name="q" value="${fn:escapeXml(q)}">
 							<input type="hidden" name="page" value="${warehousePage.page}">
 							<input type="hidden" name="includeInactive"
-								value="${includeInactive}">
+								value="${includeInactive}"> <input type="hidden"
+								name="sortBy" value="${warehousePage.sortBy}"> <input
+								type="hidden" name="sortDirection"
+								value="${warehousePage.sortDirection}">
 							<button type="submit">사용중단/재사용</button>
 						</form>
 					</div>
@@ -208,6 +291,9 @@
 				type="hidden" name="q" value="${fn:escapeXml(q)}"> <input
 				type="hidden" name="page" value="${warehousePage.page}"> <input
 				type="hidden" name="includeInactive" value="${includeInactive}">
+			<input type="hidden" name="sortBy" value="${warehousePage.sortBy}">
+			<input type="hidden" name="sortDirection"
+				value="${warehousePage.sortDirection}">
 			<div class="reference-fields">
 				<div class="master-entry-tabs" role="tablist">
 					<button type="button" role="tab" data-entry-tab="A1"
@@ -338,13 +424,17 @@ document.addEventListener("DOMContentLoaded", function () {
   const entryForm = document.querySelector("#entryForm");
   const searchForm = document.querySelector("#searchForm");
   const includeInactiveInput = document.querySelector("#includeInactiveInput");
+  const sortByInput = document.querySelector("#sortByInput");
+  const sortDirectionInput = document.querySelector("#sortDirectionInput");
   const newButton = document.querySelector("#newButton");
   const tabs = Array.from(document.querySelectorAll("#entryForm [data-entry-tab]"));
   const warehouseNameBasic = document.querySelector("#warehouseNameBasic");
   const warehouseNameInfo = document.querySelector("#warehouseNameInfo");
   const warehouseTypes = Array.from(document.querySelectorAll("[name='warehouseType']"));
   const warehouseTypesInfo = Array.from(document.querySelectorAll("[name='warehouseTypeInfo']"));
-  const selectedRows = function () { return Array.from(document.querySelectorAll(".warehouse-select:checked")); };
+  const rowCheckboxes = Array.from(document.querySelectorAll(".warehouse-select"));
+  const selectAllRows = document.querySelector("#selectAllRows");
+  const selectedRows = function () { return rowCheckboxes.filter(function (checkbox) { return checkbox.checked; }); };
   const selectedId = function () { const rows = selectedRows(); return rows.length === 1 ? rows[0].value : null; };
   const message = document.body.dataset.message;
   const error = document.body.dataset.error;
@@ -395,17 +485,32 @@ document.addEventListener("DOMContentLoaded", function () {
     includeInactiveInput.value = includeInactiveInput.value === "true" ? "false" : "true";
     searchForm.requestSubmit();
   });
-  // 변경과 사용중단 대상은 한 건만 선택한다
-  // 変更と使用停止の対象は一件だけ選択する
-  document.querySelectorAll(".warehouse-select").forEach(function (checkbox) {
-    checkbox.addEventListener("change", function () {
-      if (checkbox.checked) document.querySelectorAll(".warehouse-select").forEach(function (other) { if (other !== checkbox) other.checked = false; });
-    });
+
+  // 개별 선택 상태를 전체선택 체크박스에 반영한다
+  // 個別選択の状態を全選択チェックボックスに反映する
+  const syncSelectAll = function () {
+    const checkedCount = selectedRows().length;
+    selectAllRows.checked = rowCheckboxes.length > 0 && checkedCount === rowCheckboxes.length;
+    selectAllRows.indeterminate = checkedCount > 0 && checkedCount < rowCheckboxes.length;
+  };
+  rowCheckboxes.forEach(function (checkbox) {
+    checkbox.addEventListener("change", syncSelectAll);
   });
-  document.querySelector("#selectAllRows").addEventListener("change", function (event) {
-    document.querySelectorAll(".warehouse-select").forEach(function (item) { item.checked = false; });
-    const first = document.querySelector(".warehouse-select");
-    if (event.target.checked && first) first.checked = true;
+  selectAllRows.addEventListener("change", function () {
+    rowCheckboxes.forEach(function (checkbox) { checkbox.checked = selectAllRows.checked; });
+    syncSelectAll();
+  });
+
+  // 같은 제목을 다시 누르면 정렬 방향을 반대로 바꾼다
+  // 同じ見出しを再度押すとソート方向を反転する
+  document.querySelectorAll("[data-sort-by]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      const nextSortBy = button.dataset.sortBy;
+      const sameColumn = sortByInput.value === nextSortBy;
+      sortDirectionInput.value = sameColumn && sortDirectionInput.value === "asc" ? "desc" : "asc";
+      sortByInput.value = nextSortBy;
+      searchForm.requestSubmit();
+    });
   });
 
   // 화면을 다시 열어도 현재 검색 조건을 유지한다
@@ -415,6 +520,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const keyword = document.querySelector("#searchInput").value.trim();
     if (keyword) params.set("q", keyword);
     if (includeInactiveInput.value === "true") params.set("includeInactive", "true");
+    params.set("sortBy", sortByInput.value);
+    params.set("sortDirection", sortDirectionInput.value);
     return params;
   };
   newButton.addEventListener("click", function () {
@@ -459,4 +566,7 @@ document.addEventListener("DOMContentLoaded", function () {
 </script>
 </body>
 </html>
+
+
+
 

@@ -32,10 +32,12 @@ public class PartnerMapperXmlTests {
 		assertTrue(configuration.hasStatement(namespace + "softDeletePartner"));
 
 		BoundSql listSql = configuration.getMappedStatement(namespace + "selectPartners")
-				.getBoundSql(new PartnerSearchCriteria("지호", 1, 20, true));
+				.getBoundSql(new PartnerSearchCriteria("지호", 1, 20, true, "ceo", "desc"));
 		BoundSql insertSql = configuration.getMappedStatement(namespace + "insertPartner")
 				.getBoundSql(new PartnerVO());
 		assertTrue(listSql.getSql().contains("DEL_YN = 'N'"));
+		assertTrue(listSql.getSql().contains("P.CEO_NM"));
+		assertTrue(listSql.getSql().contains("DESC"));
 		assertTrue(insertSql.getParameterMappings().stream()
 				.anyMatch(parameter -> "useYn".equals(parameter.getProperty())));
 	}
