@@ -1,4 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn"%>
 <!doctype html>
 <html lang="ko">
 <head>
@@ -6,8 +8,88 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>창고등록리스트</title>
 <jsp:include page="../common/styles.jsp" />
+<style>
+.simple-search .include-inactive-button {
+	height: 36px;
+	padding: 0 20px;
+	border: 1px solid #dce2ea !important;
+	border-radius: 0;
+	outline: 0;
+	background: #fff !important;
+	box-shadow: none;
+	color: #10204a !important;
+	white-space: nowrap;
+	appearance: none;
+}
+
+.simple-search .include-inactive-button:hover, .simple-search .include-inactive-button:focus,
+	.simple-search .include-inactive-button:focus-visible, .simple-search .include-inactive-button:active
+	{
+	border: 1px solid #dce2ea !important;
+	outline: 0;
+	background: #fff !important;
+	box-shadow: none;
+	color: #10204a !important;
+}
+
+.simple-page .list-table th>.list-sort-button {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	width: auto;
+	min-width: 0;
+	height: auto;
+	min-height: 0;
+	margin: 0;
+	padding: 0 !important;
+	border: 0 !important;
+	border-radius: 0;
+	outline: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	color: #123b8f;
+	font: inherit;
+	font-weight: 600;
+	line-height: 1;
+	cursor: pointer;
+	appearance: none;
+}
+
+.simple-page .list-table th>.list-sort-button:hover, .simple-page .list-table th>.list-sort-button:focus,
+	.simple-page .list-table th>.list-sort-button:focus-visible,
+	.simple-page .list-table th>.list-sort-button:active {
+	padding: 0 !important;
+	border: 0 !important;
+	outline: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	color: #123b8f;
+}
+
+.sort-arrow {
+	display: inline-block;
+	width: 0;
+	height: 0;
+	border-left: 5px solid transparent;
+	border-right: 5px solid transparent;
+	border-top: 6px solid currentColor;
+}
+</style>
 </head>
-<body>
+<body data-message="${fn:escapeXml(message)}"
+	data-error="${fn:escapeXml(error)}">
+	<c:url var="listUrl" value="/basic/warehouse-list" />
+	<c:url var="registerUrl" value="/basic/warehouse/register" />
+	<c:url var="updateUrl" value="/basic/warehouse/update" />
+	<c:url var="toggleUrl" value="/basic/warehouse/toggle-use" />
+	<c:choose>
+		<c:when test="${not empty editingWarehouse}">
+			<c:set var="entryAction" value="${updateUrl}" />
+		</c:when>
+		<c:otherwise>
+			<c:set var="entryAction" value="${registerUrl}" />
+		</c:otherwise>
+	</c:choose>
 	<div class="erp-app">
 		<jsp:include page="../common/brand-header.jsp" />
 		<div class="app-body">
@@ -18,12 +100,19 @@
 					<h1>창고등록리스트</h1>
 				</header>
 				<section class="screen-content simple-page">
-					
-					<form class="simple-search" method="get"
-						action="${pageContext.request.contextPath}/basic/warehouse-list">
+					<form class="simple-search" method="get" action="${listUrl}"
+						id="searchForm">
 						<input type="search" name="q" id="searchInput"
-							placeholder="검색어 입력" aria-label="창고등록리스트 검색">
+							value="${fn:escapeXml(q)}" placeholder="검색어 입력"
+							aria-label="창고등록리스트 검색"> <input type="hidden"
+							name="includeInactive" id="includeInactiveInput"
+							value="${includeInactive}"> <input type="hidden"
+							name="sortBy" id="sortByInput" value="${warehousePage.sortBy}">
+						<input type="hidden" name="sortDirection" id="sortDirectionInput"
+							value="${warehousePage.sortDirection}">
 						<button type="submit" class="primary-button">검색(F3)</button>
+						<button type="button" class="include-inactive-button"
+							id="includeInactiveButton" aria-pressed="${includeInactive}">사용중단포함</button>
 					</form>
 					<div class="table-scroll">
 						<table class="list-table">
@@ -31,67 +120,197 @@
 								<tr>
 									<th class="selection-column"><input type="checkbox"
 										class="list-row-select" id="selectAllRows" aria-label="전체 선택"></th>
-									<th>창고코드</th>
-									<th>창고명</th>
-									<th>구분</th>
-									<th>전화번호</th>
+									<th><button type="button" class="list-sort-button"
+											data-sort-by="code">
+											창고코드<span class="sort-arrow"></span>
+										</button></th>
+									<th><button type="button" class="list-sort-button"
+											data-sort-by="name">
+											창고명<span class="sort-arrow"></span>
+										</button></th>
+									<th><button type="button" class="list-sort-button"
+											data-sort-by="type">
+											구분<span class="sort-arrow"></span>
+										</button></th>
+									<th><button type="button" class="list-sort-button"
+											data-sort-by="status">
+											사용상태<span class="sort-arrow"></span>
+										</button></th>
 									<th>수정</th>
 								</tr>
 							</thead>
 							<tbody id="pageRows">
-								<tr>
-									<td colspan="6">등록된 데이터가 없습니다.</td>
-								</tr>
+								<c:forEach items="${warehousePage.warehouses}" var="warehouse">
+									<tr data-warehouse-row="${warehouse.warehouseId}">
+										<td class="selection-column"><input type="checkbox"
+											class="list-row-select warehouse-select"
+											value="${warehouse.warehouseId}"
+											aria-label="${fn:escapeXml(warehouse.warehouseName)} 선택"></td>
+										<td><c:out value="${warehouse.warehouseCode}" /></td>
+										<td><c:out value="${warehouse.warehouseName}" /></td>
+										<td><c:choose>
+												<c:when test="${warehouse.warehouseType eq 'FACTORY'}">공장</c:when>
+												<c:otherwise>창고</c:otherwise>
+											</c:choose></td>
+										<td><c:choose>
+												<c:when test="${warehouse.useYn eq 'Y'}">사용</c:when>
+												<c:otherwise>사용중단</c:otherwise>
+											</c:choose></td>
+										<td><button type="button" class="row-edit-button"
+												data-edit-id="${warehouse.warehouseId}">수정</button></td>
+									</tr>
+								</c:forEach>
+								<c:if test="${empty warehousePage.warehouses}">
+									<tr>
+										<td colspan="6">등록된 데이터가 없습니다.</td>
+									</tr>
+								</c:if>
 							</tbody>
 						</table>
 					</div>
 					<nav class="list-pagination" aria-label="페이지 이동">
-					  <span class="list-pagination-count">총 0건</span>
-					  <div class="list-pagination-controls">
-					    <button type="button" aria-label="첫 페이지" disabled>«</button>
-					    <button type="button" aria-label="이전 페이지" disabled>‹</button>
-					    <span class="list-pagination-current" aria-current="page">1</span>
-					    <button type="button" aria-label="다음 페이지" disabled>›</button>
-					    <button type="button" aria-label="마지막 페이지" disabled>»</button>
-					  </div>
-					  <span class="list-pagination-total">1 / 1 페이지</span>
+						<span class="list-pagination-count">총 <c:out
+								value="${warehousePage.totalCount}" />건
+						</span>
+						<div class="list-pagination-controls">
+							<c:url var="firstUrl" value="/basic/warehouse-list">
+								<c:param name="page" value="1" />
+								<c:param name="q" value="${q}" />
+								<c:param name="includeInactive" value="${includeInactive}" />
+								<c:param name="sortBy" value="${warehousePage.sortBy}" />
+								<c:param name="sortDirection"
+									value="${warehousePage.sortDirection}" />
+							</c:url>
+							<button type="button" aria-label="첫 페이지"
+								data-page-url="${firstUrl}"
+								${warehousePage.page le 1 ? 'disabled' : ''}>«</button>
+							<c:choose>
+								<c:when test="${warehousePage.previous}">
+									<c:url var="previousUrl" value="/basic/warehouse-list">
+										<c:param name="page" value="${warehousePage.startPage - 1}" />
+										<c:param name="q" value="${q}" />
+										<c:param name="includeInactive" value="${includeInactive}" />
+										<c:param name="sortBy" value="${warehousePage.sortBy}" />
+										<c:param name="sortDirection"
+											value="${warehousePage.sortDirection}" />
+									</c:url>
+									<button type="button" aria-label="이전 페이지 묶음"
+										data-page-url="${previousUrl}">‹</button>
+								</c:when>
+								<c:otherwise>
+									<button type="button" aria-label="이전 페이지 묶음" disabled>‹</button>
+								</c:otherwise>
+							</c:choose>
+							<c:forEach var="pageNumber" begin="${warehousePage.startPage}"
+								end="${warehousePage.endPage}">
+								<c:choose>
+									<c:when test="${pageNumber eq warehousePage.page}">
+										<span class="list-pagination-current" aria-current="page"><c:out
+												value="${pageNumber}" /></span>
+									</c:when>
+									<c:otherwise>
+										<c:url var="pageUrl" value="/basic/warehouse-list">
+											<c:param name="page" value="${pageNumber}" />
+											<c:param name="q" value="${q}" />
+											<c:param name="includeInactive" value="${includeInactive}" />
+											<c:param name="sortBy" value="${warehousePage.sortBy}" />
+											<c:param name="sortDirection"
+												value="${warehousePage.sortDirection}" />
+										</c:url>
+										<button type="button" aria-label="${pageNumber} 페이지"
+											data-page-url="${pageUrl}">
+											<c:out value="${pageNumber}" />
+										</button>
+									</c:otherwise>
+								</c:choose>
+							</c:forEach>
+							<c:choose>
+								<c:when test="${warehousePage.next}">
+									<c:url var="nextUrl" value="/basic/warehouse-list">
+										<c:param name="page" value="${warehousePage.endPage + 1}" />
+										<c:param name="q" value="${q}" />
+										<c:param name="includeInactive" value="${includeInactive}" />
+										<c:param name="sortBy" value="${warehousePage.sortBy}" />
+										<c:param name="sortDirection"
+											value="${warehousePage.sortDirection}" />
+									</c:url>
+									<button type="button" aria-label="다음 페이지 묶음"
+										data-page-url="${nextUrl}">›</button>
+								</c:when>
+								<c:otherwise>
+									<button type="button" aria-label="다음 페이지 묶음" disabled>›</button>
+								</c:otherwise>
+							</c:choose>
+							<c:url var="lastUrl" value="/basic/warehouse-list">
+								<c:param name="page" value="${warehousePage.totalPages}" />
+								<c:param name="q" value="${q}" />
+								<c:param name="includeInactive" value="${includeInactive}" />
+								<c:param name="sortBy" value="${warehousePage.sortBy}" />
+								<c:param name="sortDirection"
+									value="${warehousePage.sortDirection}" />
+							</c:url>
+							<button type="button" aria-label="마지막 페이지"
+								data-page-url="${lastUrl}"
+								${warehousePage.page ge warehousePage.totalPages ? 'disabled' : ''}>»</button>
+						</div>
+						<span class="list-pagination-total"><c:out
+								value="${warehousePage.page}" /> / <c:out
+								value="${warehousePage.totalPages}" /> 페이지</span>
 					</nav>
 					<div class="list-footer-actions" role="group" aria-label="목록 작업">
 						<button type="button" id="newButton">신규(F2)</button>
-						<button type="button" data-list-action="integration">계층그룹</button>
-						<button type="button" data-list-action="active">사용중단/재사용</button>
-						<button type="button" data-list-action="export">Excel</button>
-						<button type="button" data-list-action="integration">웹자료올리기</button>
+						<button type="button" id="editButton">변경</button>
+						<form action="${toggleUrl}" method="post" id="toggleForm"
+							style="display: inline">
+							<input type="hidden" name="warehouseId" id="toggleWarehouseId">
+							<input type="hidden" name="q" value="${fn:escapeXml(q)}">
+							<input type="hidden" name="page" value="${warehousePage.page}">
+							<input type="hidden" name="includeInactive"
+								value="${includeInactive}"> <input type="hidden"
+								name="sortBy" value="${warehousePage.sortBy}"> <input
+								type="hidden" name="sortDirection"
+								value="${warehousePage.sortDirection}">
+							<button type="submit">사용중단/재사용</button>
+						</form>
 					</div>
 				</section>
 			</main>
 		</div>
+
 		<dialog id="entryDialog" class="simple-dialog reference-dialog"
 			aria-labelledby="entryTitle">
-		<form id="entryForm" novalidate>
-			<h2 id="entryTitle">창고등록</h2>
+		<form id="entryForm" method="post" action="${entryAction}" novalidate>
+			<h2 id="entryTitle">
+				<c:choose>
+					<c:when test="${not empty editingWarehouse}">창고수정</c:when>
+					<c:otherwise>창고등록</c:otherwise>
+				</c:choose>
+			</h2>
+			<input type="hidden" name="warehouseId"
+				value="${editingWarehouse.warehouseId}"> <input
+				type="hidden" name="q" value="${fn:escapeXml(q)}"> <input
+				type="hidden" name="page" value="${warehousePage.page}"> <input
+				type="hidden" name="includeInactive" value="${includeInactive}">
+			<input type="hidden" name="sortBy" value="${warehousePage.sortBy}">
+			<input type="hidden" name="sortDirection"
+				value="${warehousePage.sortDirection}">
 			<div class="reference-fields">
 				<div class="master-entry-tabs" role="tablist">
 					<button type="button" role="tab" data-entry-tab="A1"
 						aria-controls="panel-A1" aria-selected="true" class="active">기본</button>
 					<button type="button" role="tab" data-entry-tab="A2"
-						aria-controls="panel-A2" aria-selected="false" class="">창고정보</button>
-					<button type="button" role="tab" data-entry-tab="A3"
-						aria-controls="panel-A3" aria-selected="false" class="">부가정보</button>
+						aria-controls="panel-A2" aria-selected="false">창고정보</button>
 				</div>
 				<div class="reference-row" data-reference-label="창고코드">
 					<div class="reference-label">창고코드</div>
 					<div class="reference-control">
-						<div class="control-set    ">
-							<div class="control   ">
-
-								<input type="text" class="form-control form-control first-child"
-									data-cid="wh_cd" placeholder="창고코드" value="00001"
-									data-field-key="code" name="code" aria-label="창고코드"
-									id="field-common-code-0">
-								<button type="button"
-									class="btn btn-default btn-fn dropdown-toggle fn last-child"
-									data-cid="wh_cd" data-auto-code="code">Fn</button>
+						<div class="control-set">
+							<div class="control">
+								<input type="text"
+									class="form-control form-control first-child last-child"
+									placeholder="창고코드" name="warehouseCode"
+									value="${fn:escapeXml(editingWarehouse.warehouseCode)}"
+									${not empty editingWarehouse ? 'readonly' : ''} required>
 							</div>
 						</div>
 					</div>
@@ -100,14 +319,13 @@
 					<div class="reference-row" data-reference-label="창고명">
 						<div class="reference-label">창고명</div>
 						<div class="reference-control">
-							<div class="control-set    ">
-								<div class="control   ">
-
-									<input type="text"
+							<div class="control-set">
+								<div class="control">
+									<input type="text" id="warehouseNameBasic"
 										class="form-control form-control first-child last-child"
-										data-cid="wh_des" placeholder="창고명" value=""
-										data-field-key="name" name="name" aria-label="창고명"
-										id="field-A1-name-0">
+										placeholder="창고명" name="warehouseName"
+										value="${fn:escapeXml(editingWarehouse.warehouseName)}"
+										required>
 								</div>
 							</div>
 						</div>
@@ -117,217 +335,18 @@
 						<div class="reference-control">
 							<div class="control-set">
 								<div class="control">
-
-									<span class="form-radio" data-cid="factory_type_factoryType"><input
-										type="radio" value="0" data-cid="factory_type_factoryType"
-										name="factory_type_factoryType__A1"
-										id="field-A1-factory_type_factoryType-0" checked=""
-										data-field-key="factory_type_factoryType" aria-label="구분"><label
-										for="field-A1-factory_type_factoryType-0"
-										data-cid="factory_type_factoryType">창고</label></span><span
-										class="form-radio" data-cid="factory_type_factoryType"><input
-										type="radio" value="1" data-cid="factory_type_factoryType"
-										name="factory_type_factoryType__A1"
-										id="field-A1-factory_type_factoryType-1"
-										data-field-key="factory_type_factoryType" aria-label="구분"><label
-										for="field-A1-factory_type_factoryType-1"
-										data-cid="factory_type_factoryType">공장</label></span><span
-										class="form-radio" data-cid="factory_type_factoryType"><input
-										type="radio" value="2" data-cid="factory_type_factoryType"
-										name="factory_type_factoryType__A1"
-										id="field-A1-factory_type_factoryType-2"
-										data-field-key="factory_type_factoryType" aria-label="구분"><label
-										for="field-A1-factory_type_factoryType-2"
-										data-cid="factory_type_factoryType">공장(외주비관리)</label></span>
-								</div>
-							</div>
-							<div class="control-set  hidden">
-								<div class="control  {{style.css}} hidden">
-									<div>
-										<span ,="" class="label label-default label-light "
-											addon-cid="addon-factory_type_processCode">생산공정</span>
-									</div>
-									<button
-										class="btn btn-default btn-code-search popupHandler first-child"
-										data-cid="factory_type_processCode" type="button"
-										data-lookup="factory_type" aria-label="구분 검색">⌕</button>
-									<input type="text" class="form-control last-child"
-										data-cid="factory_type_processCode" placeholder="생산공정"
-										value="" data-field-key="factory_type_processCode"
-										name="factory_type_processCode" aria-label="생산공정"
-										id="field-A1-factory_type_processCode-3"><input
-										type="hidden" data-cid="factory_type_processCode" value=""
-										data-field-key="factory_type_processCodeCode"
-										name="factory_type_processCodeCode" aria-label="구분"
-										id="field-A1-factory_type_processCodeCode-4">
-								</div>
-							</div>
-							<div class="control-set  hidden">
-								<div class="control  {{style.css}} hidden">
-									<div>
-										<span ,="" class="label label-default label-light "
-											addon-cid="addon-factory_type_outerFactory">외주거래처코드</span>
-									</div>
-									<button
-										class="btn btn-default btn-code-search popupHandler first-child"
-										data-cid="factory_type_outerFactory" type="button"
-										data-lookup="factory_type" aria-label="구분 검색">⌕</button>
-									<input type="text" class="form-control last-child"
-										data-cid="factory_type_outerFactory" placeholder="외주거래처코드"
-										value="" data-field-key="factory_type_outerFactory"
-										name="factory_type_outerFactory" aria-label="외주거래처코드"
-										id="field-A1-factory_type_outerFactory-5"><input
-										type="hidden" data-cid="factory_type_outerFactory" value=""
-										data-field-key="factory_type_outerFactoryCode"
-										name="factory_type_outerFactoryCode" aria-label="구분"
-										id="field-A1-factory_type_outerFactoryCode-6">
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="reference-row" data-reference-label="부가세율(매출)">
-						<div class="reference-label">부가세율(매출)</div>
-						<div class="reference-control">
-							<div class="control-set">
-								<div class="control  flex-none">
-
-									<span class="form-radio" data-cid="rate_sale_radio"><input
-										type="radio" value="N" data-cid="rate_sale_radio"
-										name="rate_sale_radio__A1" id="field-A1-rate_sale_radio-0"
-										data-field-key="rate_sale_radio" aria-label="부가세율(매출)"
-										checked=""><label for="field-A1-rate_sale_radio-0"
-										data-cid="rate_sale_radio">기본설정</label></span><span
-										class="form-radio" data-cid="rate_sale_radio"><input
-										type="radio" value="Y" data-cid="rate_sale_radio"
-										name="rate_sale_radio__A1" id="field-A1-rate_sale_radio-1"
-										data-field-key="rate_sale_radio" aria-label="부가세율(매출)"><label
-										for="field-A1-rate_sale_radio-1" data-cid="rate_sale_radio">직접입력</label></span>
-								</div>
-								<div class="control   hidden">
-
-									<input type="text"
-										class="form-control form-control text-right first-child last-child"
-										data-cid="rate_sale_input" placeholder="부가세율(매출)" value=""
-										data-field-key="rate_sale" name="rate_sale"
-										aria-label="부가세율(매출)" id="field-A1-rate_sale-2">
-								</div>
-								<div class="control  flex-none hidden">
-
-									<span class="">%</span>
-
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="reference-row" data-reference-label="부가세율(매입)">
-						<div class="reference-label">부가세율(매입)</div>
-						<div class="reference-control">
-							<div class="control-set">
-								<div class="control  flex-none">
-
-									<span class="form-radio" data-cid="rate_buy_radio"><input
-										type="radio" value="N" data-cid="rate_buy_radio"
-										name="rate_buy_radio__A1" id="field-A1-rate_buy_radio-0"
-										data-field-key="rate_buy_radio" aria-label="부가세율(매입)"
-										checked=""><label for="field-A1-rate_buy_radio-0"
-										data-cid="rate_buy_radio">기본설정</label></span><span class="form-radio"
-										data-cid="rate_buy_radio"><input type="radio" value="Y"
-										data-cid="rate_buy_radio" name="rate_buy_radio__A1"
-										id="field-A1-rate_buy_radio-1" data-field-key="rate_buy_radio"
-										aria-label="부가세율(매입)"><label
-										for="field-A1-rate_buy_radio-1" data-cid="rate_buy_radio">직접입력</label></span>
-								</div>
-								<div class="control   hidden">
-
-									<input type="text"
-										class="form-control form-control text-right first-child last-child"
-										data-cid="rate_buy_input" placeholder="부가세율(매입)" value=""
-										data-field-key="rate_buy" name="rate_buy"
-										aria-label="부가세율(매입)" id="field-A1-rate_buy-2">
-								</div>
-								<div class="control  flex-none hidden">
-
-									<span class="">%</span>
-
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="reference-row" data-reference-label="영업단가그룹">
-						<div class="reference-label">영업단가그룹</div>
-						<div class="reference-control">
-							<div class="control-set    ">
-								<div class="control  {{style.css}} ">
-									<button
-										class="btn btn-default btn-code-search popupHandler first-child"
-										data-cid="price_group" type="button" data-lookup="price_group"
-										aria-label="영업단가그룹 검색">⌕</button>
-									<input type="text" class="form-control last-child"
-										data-cid="price_group" placeholder="영업단가그룹" value=""
-										data-field-key="price_group" name="price_group"
-										aria-label="영업단가그룹" id="field-A1-price_group-0"><input
-										type="hidden" data-cid="price_group" value=""
-										data-field-key="price_groupCode" name="price_groupCode"
-										aria-label="영업단가그룹" id="field-A1-price_groupCode-1">
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="reference-row" data-reference-label="구매단가그룹">
-						<div class="reference-label">구매단가그룹</div>
-						<div class="reference-control">
-							<div class="control-set    ">
-								<div class="control  {{style.css}} ">
-									<button
-										class="btn btn-default btn-code-search popupHandler first-child"
-										data-cid="price_group2" type="button"
-										data-lookup="price_group2" aria-label="구매단가그룹 검색">⌕</button>
-									<input type="text" class="form-control last-child"
-										data-cid="price_group2" placeholder="구매단가그룹" value=""
-										data-field-key="price_group2" name="price_group2"
-										aria-label="구매단가그룹" id="field-A1-price_group2-0"><input
-										type="hidden" data-cid="price_group2" value=""
-										data-field-key="price_group2Code" name="price_group2Code"
-										aria-label="구매단가그룹" id="field-A1-price_group2Code-1">
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="reference-row" data-reference-label="창고계층그룹">
-						<div class="reference-label">창고계층그룹</div>
-						<div class="reference-control">
-							<div class="control-set    ">
-								<div class="control   " data-cid="wh_level_group">
-									<a data-cid="wh_level_group" class="hidden" type="button"
-										role="button" tabindex="0">선택</a>
-									<div class="hidden"></div>
-									<button
-										class="btn btn-default btn-code-search btn-vertical-top first-child"
-										data-cid="wh_level_group" type="button"
-										data-lookup="wh_level_group" aria-label="창고계층그룹 검색">⌕</button>
-									<div class="tags-input last-child" data-cid="wh_level_group">
-										<div class="input-height-fixed" data-cid="wh_level_group">
-											<div>
-												<div class="tags-input-typeahead">
-													<div>
-														<div class="tags-input-typeahead">
-															<input type="text"
-																class="form-control form-control-code noneEvent "
-																data-cid="wh_level_group" placeholder="창고계층그룹" value=""
-																data-field-key="wh_level_group" name="wh_level_group"
-																aria-label="창고계층그룹" id="field-A1-wh_level_group-0">
-														</div>
-													</div>
-												</div>
-											</div>
-										</div>
-									</div>
-									<button
-										class="btn btn-default btn-ellipsis btn-vertical-top hidden"
-										data-cid="wh_level_group" type="button">…</button>
-
-
-
+									<span class="form-radio"><input type="radio"
+										id="warehouseTypeNormal" name="warehouseType" value="NORMAL"
+										${empty editingWarehouse.warehouseType or editingWarehouse.warehouseType eq 'NORMAL' ? 'checked' : ''}><label
+										for="warehouseTypeNormal">창고</label></span> <span class="form-radio"><input
+										type="radio" id="warehouseTypeFactory" name="warehouseType"
+										value="FACTORY"
+										${editingWarehouse.warehouseType eq 'FACTORY' ? 'checked' : ''}><label
+										for="warehouseTypeFactory">공장</label></span> <span class="form-radio"><input
+										type="radio" id="warehouseTypeOutside" name="warehouseType"
+										value="OUTSIDE"
+										${editingWarehouse.warehouseType eq 'OUTSIDE' ? 'checked' : ''}><label
+										for="warehouseTypeOutside">공장(외주비관리)</label></span>
 								</div>
 							</div>
 						</div>
@@ -337,14 +356,12 @@
 					<div class="reference-row" data-reference-label="창고명">
 						<div class="reference-label">창고명</div>
 						<div class="reference-control">
-							<div class="control-set    ">
-								<div class="control   ">
-
-									<input type="text"
+							<div class="control-set">
+								<div class="control">
+									<input type="text" id="warehouseNameInfo"
 										class="form-control form-control first-child last-child"
-										data-cid="wh_des" placeholder="창고명" value=""
-										data-field-key="name" name="name" aria-label="창고명"
-										id="field-A2-name-0">
+										placeholder="창고명"
+										value="${fn:escapeXml(editingWarehouse.warehouseName)}">
 								</div>
 							</div>
 						</div>
@@ -354,507 +371,37 @@
 						<div class="reference-control">
 							<div class="control-set">
 								<div class="control">
-
-									<span class="form-radio" data-cid="factory_type_factoryType"><input
-										type="radio" value="0" data-cid="factory_type_factoryType"
-										name="factory_type_factoryType__A2"
-										id="field-A2-factory_type_factoryType-0" checked=""
-										data-field-key="factory_type_factoryType" aria-label="구분"><label
-										for="field-A2-factory_type_factoryType-0"
-										data-cid="factory_type_factoryType">창고</label></span><span
-										class="form-radio" data-cid="factory_type_factoryType"><input
-										type="radio" value="1" data-cid="factory_type_factoryType"
-										name="factory_type_factoryType__A2"
-										id="field-A2-factory_type_factoryType-1"
-										data-field-key="factory_type_factoryType" aria-label="구분"><label
-										for="field-A2-factory_type_factoryType-1"
-										data-cid="factory_type_factoryType">공장</label></span><span
-										class="form-radio" data-cid="factory_type_factoryType"><input
-										type="radio" value="2" data-cid="factory_type_factoryType"
-										name="factory_type_factoryType__A2"
-										id="field-A2-factory_type_factoryType-2"
-										data-field-key="factory_type_factoryType" aria-label="구분"><label
-										for="field-A2-factory_type_factoryType-2"
-										data-cid="factory_type_factoryType">공장(외주비관리)</label></span>
-								</div>
-							</div>
-							<div class="control-set  hidden">
-								<div class="control  {{style.css}} hidden">
-									<div>
-										<span ,="" class="label label-default label-light "
-											addon-cid="addon-factory_type_processCode">생산공정</span>
-									</div>
-									<button
-										class="btn btn-default btn-code-search popupHandler first-child"
-										data-cid="factory_type_processCode" type="button"
-										data-lookup="factory_type" aria-label="구분 검색">⌕</button>
-									<input type="text" class="form-control last-child"
-										data-cid="factory_type_processCode" placeholder="생산공정"
-										value="" data-field-key="factory_type_processCode"
-										name="factory_type_processCode" aria-label="생산공정"
-										id="field-A2-factory_type_processCode-3"><input
-										type="hidden" data-cid="factory_type_processCode" value=""
-										data-field-key="factory_type_processCodeCode"
-										name="factory_type_processCodeCode" aria-label="구분"
-										id="field-A2-factory_type_processCodeCode-4">
-								</div>
-							</div>
-							<div class="control-set  hidden">
-								<div class="control  {{style.css}} hidden">
-									<div>
-										<span ,="" class="label label-default label-light "
-											addon-cid="addon-factory_type_outerFactory">외주거래처코드</span>
-									</div>
-									<button
-										class="btn btn-default btn-code-search popupHandler first-child"
-										data-cid="factory_type_outerFactory" type="button"
-										data-lookup="factory_type" aria-label="구분 검색">⌕</button>
-									<input type="text" class="form-control last-child"
-										data-cid="factory_type_outerFactory" placeholder="외주거래처코드"
-										value="" data-field-key="factory_type_outerFactory"
-										name="factory_type_outerFactory" aria-label="외주거래처코드"
-										id="field-A2-factory_type_outerFactory-5"><input
-										type="hidden" data-cid="factory_type_outerFactory" value=""
-										data-field-key="factory_type_outerFactoryCode"
-										name="factory_type_outerFactoryCode" aria-label="구분"
-										id="field-A2-factory_type_outerFactoryCode-6">
+									<span class="form-radio"><input type="radio"
+										id="warehouseTypeInfoNormal" name="warehouseTypeInfo"
+										value="NORMAL"
+										${empty editingWarehouse.warehouseType or editingWarehouse.warehouseType eq 'NORMAL' ? 'checked' : ''}><label
+										for="warehouseTypeInfoNormal">창고</label></span> <span
+										class="form-radio"><input type="radio"
+										id="warehouseTypeInfoFactory" name="warehouseTypeInfo"
+										value="FACTORY"
+										${editingWarehouse.warehouseType eq 'FACTORY' ? 'checked' : ''}><label
+										for="warehouseTypeInfoFactory">공장</label></span> <span
+										class="form-radio"><input type="radio"
+										id="warehouseTypeInfoOutside" name="warehouseTypeInfo"
+										value="OUTSIDE"
+										${editingWarehouse.warehouseType eq 'OUTSIDE' ? 'checked' : ''}><label
+										for="warehouseTypeInfoOutside">공장(외주비관리)</label></span>
 								</div>
 							</div>
 						</div>
 					</div>
-					<div class="reference-row" data-reference-label="부가세율(매출)">
-						<div class="reference-label">부가세율(매출)</div>
+					<div class="reference-row" data-reference-label="사용형태">
+						<div class="reference-label">사용형태</div>
 						<div class="reference-control">
 							<div class="control-set">
-								<div class="control  flex-none">
-
-									<span class="form-radio" data-cid="rate_sale_radio"><input
-										type="radio" value="N" data-cid="rate_sale_radio"
-										name="rate_sale_radio__A2" id="field-A2-rate_sale_radio-0"
-										data-field-key="rate_sale_radio" aria-label="부가세율(매출)"
-										checked=""><label for="field-A2-rate_sale_radio-0"
-										data-cid="rate_sale_radio">기본설정</label></span><span
-										class="form-radio" data-cid="rate_sale_radio"><input
-										type="radio" value="Y" data-cid="rate_sale_radio"
-										name="rate_sale_radio__A2" id="field-A2-rate_sale_radio-1"
-										data-field-key="rate_sale_radio" aria-label="부가세율(매출)"><label
-										for="field-A2-rate_sale_radio-1" data-cid="rate_sale_radio">직접입력</label></span>
-								</div>
-								<div class="control   hidden">
-
-									<input type="text"
-										class="form-control form-control text-right first-child last-child"
-										data-cid="rate_sale_input" placeholder="부가세율(매출)" value=""
-										data-field-key="rate_sale" name="rate_sale"
-										aria-label="부가세율(매출)" id="field-A2-rate_sale-2">
-								</div>
-								<div class="control  flex-none hidden">
-
-									<span class="">%</span>
-
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="reference-row" data-reference-label="부가세율(매입)">
-						<div class="reference-label">부가세율(매입)</div>
-						<div class="reference-control">
-							<div class="control-set">
-								<div class="control  flex-none">
-
-									<span class="form-radio" data-cid="rate_buy_radio"><input
-										type="radio" value="N" data-cid="rate_buy_radio"
-										name="rate_buy_radio__A2" id="field-A2-rate_buy_radio-0"
-										data-field-key="rate_buy_radio" aria-label="부가세율(매입)"
-										checked=""><label for="field-A2-rate_buy_radio-0"
-										data-cid="rate_buy_radio">기본설정</label></span><span class="form-radio"
-										data-cid="rate_buy_radio"><input type="radio" value="Y"
-										data-cid="rate_buy_radio" name="rate_buy_radio__A2"
-										id="field-A2-rate_buy_radio-1" data-field-key="rate_buy_radio"
-										aria-label="부가세율(매입)"><label
-										for="field-A2-rate_buy_radio-1" data-cid="rate_buy_radio">직접입력</label></span>
-								</div>
-								<div class="control   hidden">
-
-									<input type="text"
-										class="form-control form-control text-right first-child last-child"
-										data-cid="rate_buy_input" placeholder="부가세율(매입)" value=""
-										data-field-key="rate_buy" name="rate_buy"
-										aria-label="부가세율(매입)" id="field-A2-rate_buy-2">
-								</div>
-								<div class="control  flex-none hidden">
-
-									<span class="">%</span>
-
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="reference-row" data-reference-label="영업단가그룹">
-						<div class="reference-label">영업단가그룹</div>
-						<div class="reference-control">
-							<div class="control-set    ">
-								<div class="control  {{style.css}} ">
-									<button
-										class="btn btn-default btn-code-search popupHandler first-child"
-										data-cid="price_group" type="button" data-lookup="price_group"
-										aria-label="영업단가그룹 검색">⌕</button>
-									<input type="text" class="form-control last-child"
-										data-cid="price_group" placeholder="영업단가그룹" value=""
-										data-field-key="price_group" name="price_group"
-										aria-label="영업단가그룹" id="field-A2-price_group-0"><input
-										type="hidden" data-cid="price_group" value=""
-										data-field-key="price_groupCode" name="price_groupCode"
-										aria-label="영업단가그룹" id="field-A2-price_groupCode-1">
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="reference-row" data-reference-label="구매단가그룹">
-						<div class="reference-label">구매단가그룹</div>
-						<div class="reference-control">
-							<div class="control-set    ">
-								<div class="control  {{style.css}} ">
-									<button
-										class="btn btn-default btn-code-search popupHandler first-child"
-										data-cid="price_group2" type="button"
-										data-lookup="price_group2" aria-label="구매단가그룹 검색">⌕</button>
-									<input type="text" class="form-control last-child"
-										data-cid="price_group2" placeholder="구매단가그룹" value=""
-										data-field-key="price_group2" name="price_group2"
-										aria-label="구매단가그룹" id="field-A2-price_group2-0"><input
-										type="hidden" data-cid="price_group2" value=""
-										data-field-key="price_group2Code" name="price_group2Code"
-										aria-label="구매단가그룹" id="field-A2-price_group2Code-1">
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="reference-row" data-reference-label="창고계층그룹">
-						<div class="reference-label">창고계층그룹</div>
-						<div class="reference-control">
-							<div class="control-set    ">
-								<div class="control   " data-cid="wh_level_group">
-									<a data-cid="wh_level_group" class="hidden" type="button"
-										role="button" tabindex="0">선택</a>
-									<div class="hidden"></div>
-									<button
-										class="btn btn-default btn-code-search btn-vertical-top first-child"
-										data-cid="wh_level_group" type="button"
-										data-lookup="wh_level_group" aria-label="창고계층그룹 검색">⌕</button>
-									<div class="tags-input last-child" data-cid="wh_level_group">
-										<div class="input-height-fixed" data-cid="wh_level_group">
-											<div>
-												<div class="tags-input-typeahead">
-													<div>
-														<div class="tags-input-typeahead">
-															<input type="text"
-																class="form-control form-control-code noneEvent "
-																data-cid="wh_level_group" placeholder="창고계층그룹" value=""
-																data-field-key="wh_level_group" name="wh_level_group"
-																aria-label="창고계층그룹" id="field-A2-wh_level_group-0">
-														</div>
-													</div>
-												</div>
-											</div>
-										</div>
-									</div>
-									<button
-										class="btn btn-default btn-ellipsis btn-vertical-top hidden"
-										data-cid="wh_level_group" type="button">…</button>
-
-
-
-								</div>
-							</div>
-						</div>
-					</div>
-				</section>
-				<section id="panel-A3" data-entry-panel="A3" role="tabpanel" hidden>
-					<div class="reference-row" data-reference-label="추가문자형식1">
-						<div class="reference-label">추가문자형식1</div>
-						<div class="reference-control">
-							<div class="control-set    ">
-								<div class="control   ">
-
-									<input type="text"
-										class="form-control form-control first-child last-child"
-										data-cid="ADD_TXT_01_T" placeholder="추가문자형식1" value=""
-										data-field-key="ADD_TXT_01_T" name="ADD_TXT_01_T"
-										aria-label="추가문자형식1" id="field-A3-ADD_TXT_01_T-0">
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="reference-row" data-reference-label="추가문자형식2">
-						<div class="reference-label">추가문자형식2</div>
-						<div class="reference-control">
-							<div class="control-set    ">
-								<div class="control   ">
-
-									<input type="text"
-										class="form-control form-control first-child last-child"
-										data-cid="ADD_TXT_02_T" placeholder="추가문자형식2" value=""
-										data-field-key="ADD_TXT_02_T" name="ADD_TXT_02_T"
-										aria-label="추가문자형식2" id="field-A3-ADD_TXT_02_T-0">
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="reference-row" data-reference-label="추가문자형식3">
-						<div class="reference-label">추가문자형식3</div>
-						<div class="reference-control">
-							<div class="control-set    ">
-								<div class="control   ">
-
-									<input type="text"
-										class="form-control form-control first-child last-child"
-										data-cid="ADD_TXT_03_T" placeholder="추가문자형식3" value=""
-										data-field-key="ADD_TXT_03_T" name="ADD_TXT_03_T"
-										aria-label="추가문자형식3" id="field-A3-ADD_TXT_03_T-0">
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="reference-row" data-reference-label="추가숫자형식1">
-						<div class="reference-label">추가숫자형식1</div>
-						<div class="reference-control">
-							<div class="control-set    ">
-								<div class="control   ">
-
-									<input type="text"
-										class="form-control form-control text-right first-child last-child"
-										data-cid="ADD_NUM_01_T" placeholder="추가숫자형식1" value=""
-										data-field-key="ADD_NUM_01_T" name="ADD_NUM_01_T"
-										aria-label="추가숫자형식1" id="field-A3-ADD_NUM_01_T-0">
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="reference-row" data-reference-label="추가숫자형식2">
-						<div class="reference-label">추가숫자형식2</div>
-						<div class="reference-control">
-							<div class="control-set    ">
-								<div class="control   ">
-
-									<input type="text"
-										class="form-control form-control text-right first-child last-child"
-										data-cid="ADD_NUM_02_T" placeholder="추가숫자형식2" value=""
-										data-field-key="ADD_NUM_02_T" name="ADD_NUM_02_T"
-										aria-label="추가숫자형식2" id="field-A3-ADD_NUM_02_T-0">
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="reference-row" data-reference-label="추가숫자형식3">
-						<div class="reference-label">추가숫자형식3</div>
-						<div class="reference-control">
-							<div class="control-set    ">
-								<div class="control   ">
-
-									<input type="text"
-										class="form-control form-control text-right first-child last-child"
-										data-cid="ADD_NUM_03_T" placeholder="추가숫자형식3" value=""
-										data-field-key="ADD_NUM_03_T" name="ADD_NUM_03_T"
-										aria-label="추가숫자형식3" id="field-A3-ADD_NUM_03_T-0">
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="reference-row" data-reference-label="추가장문형식1">
-						<div class="reference-label">추가장문형식1</div>
-						<div class="reference-control">
-							<div class="control-set multi-line   ">
-								<div class="control   ">
-
-									<textarea rows="2" class="form-control first-child last-child"
-										data-cid="ADD_LTXT_01_T" wrap="hard" placeholder="추가장문형식1"
-										data-field-key="ADD_LTXT_01_T" name="ADD_LTXT_01_T"
-										aria-label="추가장문형식1" id="field-A3-ADD_LTXT_01_T-0"></textarea>
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="reference-row" data-reference-label="추가장문형식2">
-						<div class="reference-label">추가장문형식2</div>
-						<div class="reference-control">
-							<div class="control-set multi-line   ">
-								<div class="control   ">
-
-									<textarea rows="2" class="form-control first-child last-child"
-										data-cid="ADD_LTXT_02_T" wrap="hard" placeholder="추가장문형식2"
-										data-field-key="ADD_LTXT_02_T" name="ADD_LTXT_02_T"
-										aria-label="추가장문형식2" id="field-A3-ADD_LTXT_02_T-0"></textarea>
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="reference-row" data-reference-label="추가장문형식3">
-						<div class="reference-label">추가장문형식3</div>
-						<div class="reference-control">
-							<div class="control-set multi-line   ">
-								<div class="control   ">
-
-									<textarea rows="2" class="form-control first-child last-child"
-										data-cid="ADD_LTXT_03_T" wrap="hard" placeholder="추가장문형식3"
-										data-field-key="ADD_LTXT_03_T" name="ADD_LTXT_03_T"
-										aria-label="추가장문형식3" id="field-A3-ADD_LTXT_03_T-0"></textarea>
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="reference-row" data-reference-label="추가일자형식1">
-						<div class="reference-label">추가일자형식1</div>
-						<div class="reference-control">
-							<div class="control-set    ">
-								<div class="control   ">
-
-									<div class="wrapper-datepicker {{style.contextCss}}"
-										data-cid="{{cid}}">
-										<select data-field-key="ADD_DATE_01_T"
-											data-cid="ADD_DATE_01_T" name="ADD_DATE_01_T"
-											aria-label="추가일자형식1" data-date-year="true"
-											id="field-A3-ADD_DATE_01_T-0"><option value="===="
-												selected="">====</option>
-											<option value="2027">2027</option>
-											<option value="2026">2026</option>
-											<option value="2025">2025</option>
-											<option value="2024">2024</option>
-											<option value="직접입력">직접입력</option></select><span class="">&nbsp;/</span>
-										<select data-field-key="ADD_DATE_01_T_1"
-											data-cid="ADD_DATE_01_T" name="ADD_DATE_01_T_1"
-											aria-label="추가일자형식1" data-date-month="true"
-											id="field-A3-ADD_DATE_01_T_1-1"><option value="=="
-												selected="">==</option>
-											<option value="01">01</option>
-											<option value="02">02</option>
-											<option value="03">03</option>
-											<option value="04">04</option>
-											<option value="05">05</option>
-											<option value="06">06</option>
-											<option value="07">07</option>
-											<option value="08">08</option>
-											<option value="09">09</option>
-											<option value="10">10</option>
-											<option value="11">11</option>
-											<option value="12">12</option></select> <span class="">/&nbsp;</span><input
-											type="text" class="form-control " data-cid="ADD_DATE_01_T"
-											value="" data-field-key="ADD_DATE_01_T_2"
-											name="ADD_DATE_01_T_2" aria-label="추가일자형식1"
-											id="field-A3-ADD_DATE_01_T_2-2">
-										<div id="btn-datepicker-toggle" data-cid="ADD_DATE_01_T"
-											class="btn-datepicker-toggle " data-calendar="true"
-											tabindex="0" role="button" aria-label="추가일자형식1 달력">▦</div>
-
-									</div>
-
-
-
-
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="reference-row" data-reference-label="추가일자형식2">
-						<div class="reference-label">추가일자형식2</div>
-						<div class="reference-control">
-							<div class="control-set    ">
-								<div class="control   ">
-
-									<div class="wrapper-datepicker {{style.contextCss}}"
-										data-cid="{{cid}}">
-										<select data-field-key="ADD_DATE_02_T"
-											data-cid="ADD_DATE_02_T" name="ADD_DATE_02_T"
-											aria-label="추가일자형식2" data-date-year="true"
-											id="field-A3-ADD_DATE_02_T-0"><option value="===="
-												selected="">====</option>
-											<option value="2027">2027</option>
-											<option value="2026">2026</option>
-											<option value="2025">2025</option>
-											<option value="2024">2024</option>
-											<option value="직접입력">직접입력</option></select><span class="">&nbsp;/</span>
-										<select data-field-key="ADD_DATE_02_T_1"
-											data-cid="ADD_DATE_02_T" name="ADD_DATE_02_T_1"
-											aria-label="추가일자형식2" data-date-month="true"
-											id="field-A3-ADD_DATE_02_T_1-1"><option value="=="
-												selected="">==</option>
-											<option value="01">01</option>
-											<option value="02">02</option>
-											<option value="03">03</option>
-											<option value="04">04</option>
-											<option value="05">05</option>
-											<option value="06">06</option>
-											<option value="07">07</option>
-											<option value="08">08</option>
-											<option value="09">09</option>
-											<option value="10">10</option>
-											<option value="11">11</option>
-											<option value="12">12</option></select> <span class="">/&nbsp;</span><input
-											type="text" class="form-control " data-cid="ADD_DATE_02_T"
-											value="" data-field-key="ADD_DATE_02_T_2"
-											name="ADD_DATE_02_T_2" aria-label="추가일자형식2"
-											id="field-A3-ADD_DATE_02_T_2-2">
-										<div id="btn-datepicker-toggle" data-cid="ADD_DATE_02_T"
-											class="btn-datepicker-toggle " data-calendar="true"
-											tabindex="0" role="button" aria-label="추가일자형식2 달력">▦</div>
-
-									</div>
-
-
-
-
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="reference-row" data-reference-label="추가일자형식3">
-						<div class="reference-label">추가일자형식3</div>
-						<div class="reference-control">
-							<div class="control-set    ">
-								<div class="control   ">
-
-									<div class="wrapper-datepicker {{style.contextCss}}"
-										data-cid="{{cid}}">
-										<select data-field-key="ADD_DATE_03_T"
-											data-cid="ADD_DATE_03_T" name="ADD_DATE_03_T"
-											aria-label="추가일자형식3" data-date-year="true"
-											id="field-A3-ADD_DATE_03_T-0"><option value="===="
-												selected="">====</option>
-											<option value="2027">2027</option>
-											<option value="2026">2026</option>
-											<option value="2025">2025</option>
-											<option value="2024">2024</option>
-											<option value="직접입력">직접입력</option></select><span class="">&nbsp;/</span>
-										<select data-field-key="ADD_DATE_03_T_1"
-											data-cid="ADD_DATE_03_T" name="ADD_DATE_03_T_1"
-											aria-label="추가일자형식3" data-date-month="true"
-											id="field-A3-ADD_DATE_03_T_1-1"><option value="=="
-												selected="">==</option>
-											<option value="01">01</option>
-											<option value="02">02</option>
-											<option value="03">03</option>
-											<option value="04">04</option>
-											<option value="05">05</option>
-											<option value="06">06</option>
-											<option value="07">07</option>
-											<option value="08">08</option>
-											<option value="09">09</option>
-											<option value="10">10</option>
-											<option value="11">11</option>
-											<option value="12">12</option></select> <span class="">/&nbsp;</span><input
-											type="text" class="form-control " data-cid="ADD_DATE_03_T"
-											value="" data-field-key="ADD_DATE_03_T_2"
-											name="ADD_DATE_03_T_2" aria-label="추가일자형식3"
-											id="field-A3-ADD_DATE_03_T_2-2">
-										<div id="btn-datepicker-toggle" data-cid="ADD_DATE_03_T"
-											class="btn-datepicker-toggle " data-calendar="true"
-											tabindex="0" role="button" aria-label="추가일자형식3 달력">▦</div>
-
-									</div>
-
-
-
-
+								<div class="control">
+									<span class="form-radio"><input type="radio"
+										id="useYnYes" name="useYn" value="Y"
+										${empty editingWarehouse.useYn or editingWarehouse.useYn eq 'Y' ? 'checked' : ''}><label
+										for="useYnYes">사용</label></span> <span class="form-radio"><input
+										type="radio" id="useYnNo" name="useYn" value="N"
+										${editingWarehouse.useYn eq 'N' ? 'checked' : ''}><label
+										for="useYnNo">사용중단</label></span>
 								</div>
 							</div>
 						</div>
@@ -871,74 +418,155 @@
 		</dialog>
 	</div>
 	<script>
-	document.addEventListener("DOMContentLoaded", function () {
-	  const searchInput = document.querySelector("#searchInput");
-	  if (searchInput) searchInput.value = new URLSearchParams(location.search).get("q") || "";
-	  const searchForm = document.querySelector(".simple-search");
-	  if (searchForm) searchForm.addEventListener("submit", function (event) {
-	    event.preventDefault();
-	    alert("검색 기능 구현이 필요합니다.");
-	  });
-	  const entryForm = document.querySelector("#entryForm");
-	  const entryDialog = document.querySelector("#entryDialog");
-	  const newButton = document.querySelector("#newButton");
-	  if (newButton) newButton.addEventListener("click", function () {
-	    entryForm.reset();
-	    entryDialog.showModal();
-	  });
-	  const closeButton = document.querySelector("#entryCloseButton");
-	  if (closeButton) closeButton.addEventListener("click", function () {
-	    entryDialog.close();
-	  });
-	  entryForm.addEventListener("submit", function (event) {
-	    event.preventDefault();
-	    alert("저장 기능 구현이 필요합니다.");
-	  });
-	  document.addEventListener("keydown", function (event) {
-	    if (event.key === "F2" && !document.querySelector("dialog[open]")) {
-	      event.preventDefault();
-	      newButton.click();
-	    }
-	    if (event.key === "F8" && entryDialog.open) {
-	      event.preventDefault();
-	      entryForm.requestSubmit();
-	    }
-	  });
-	  document.querySelectorAll("[data-list-action]").forEach(function (button) {
-	    button.addEventListener("click", function () {
-	      if (button.dataset.listAction === "print") { window.print(); return; }
-	      alert(button.textContent.trim() + " 기능 구현이 필요합니다.");
-	    });
-	  });
-	  const tabs = Array.from(document.querySelectorAll("#entryForm [data-entry-tab]"));
-	  tabs.forEach(function (tab) {
-	    tab.addEventListener("click", function () {
-	      tabs.forEach(function (item) {
-	        const active = item.dataset.entryTab === tab.dataset.entryTab;
-	        item.classList.toggle("active", active);
-	        item.setAttribute("aria-selected", String(active));
-	      });
-	      document.querySelectorAll("#entryForm [data-entry-panel]").forEach(function (panel) {
-	        panel.hidden = panel.dataset.entryPanel !== tab.dataset.entryTab;
-	      });
-	    });
-	  });
-	  if (tabs.length) tabs[0].click();
-	  document.querySelector("#entryForm").addEventListener("reset", function () {
-	    if (tabs.length) setTimeout(function () { tabs[0].click(); }, 0);
-	  });
-	  const selectAllRows = document.querySelector("#selectAllRows");
-	  if (selectAllRows) selectAllRows.addEventListener("click", function (event) {
-	    event.preventDefault();
-	    alert("목록 선택 기능 구현이 필요합니다.");
-	  });
-	  document.querySelectorAll("[data-lookup], [data-calendar], [data-attachment], [data-auto-code]").forEach(function (control) {
-	    control.addEventListener("click", function (event) {
-	      event.preventDefault();
-	      alert((control.getAttribute("aria-label") || control.textContent.trim() || "선택") + " 기능 구현이 필요합니다.");
-	    });
-	  });
-	});
-	</script>
+document.addEventListener("DOMContentLoaded", function () {
+  const listUrl = "${listUrl}";
+  const entryDialog = document.querySelector("#entryDialog");
+  const entryForm = document.querySelector("#entryForm");
+  const searchForm = document.querySelector("#searchForm");
+  const includeInactiveInput = document.querySelector("#includeInactiveInput");
+  const sortByInput = document.querySelector("#sortByInput");
+  const sortDirectionInput = document.querySelector("#sortDirectionInput");
+  const newButton = document.querySelector("#newButton");
+  const tabs = Array.from(document.querySelectorAll("#entryForm [data-entry-tab]"));
+  const warehouseNameBasic = document.querySelector("#warehouseNameBasic");
+  const warehouseNameInfo = document.querySelector("#warehouseNameInfo");
+  const warehouseTypes = Array.from(document.querySelectorAll("[name='warehouseType']"));
+  const warehouseTypesInfo = Array.from(document.querySelectorAll("[name='warehouseTypeInfo']"));
+  const rowCheckboxes = Array.from(document.querySelectorAll(".warehouse-select"));
+  const selectAllRows = document.querySelector("#selectAllRows");
+  const selectedRows = function () { return rowCheckboxes.filter(function (checkbox) { return checkbox.checked; }); };
+  const selectedId = function () { const rows = selectedRows(); return rows.length === 1 ? rows[0].value : null; };
+  const message = document.body.dataset.message;
+  const error = document.body.dataset.error;
+  if (message) alert(message);
+  if (error) alert(error);
+
+  // 기본과 창고정보의 입력값 맞추기
+  // 基本と倉庫情報の入力値を合わせる
+  const copyWarehouseType = function (source, target) {
+    const selected = source.find(function (radio) { return radio.checked; });
+    target.forEach(function (radio) { radio.checked = selected && radio.value === selected.value; });
+  };
+  const copyBasicToInfo = function () {
+    warehouseNameInfo.value = warehouseNameBasic.value;
+    copyWarehouseType(warehouseTypes, warehouseTypesInfo);
+  };
+  warehouseNameBasic.addEventListener("input", copyBasicToInfo);
+  warehouseNameInfo.addEventListener("input", function () { warehouseNameBasic.value = warehouseNameInfo.value; });
+  warehouseTypes.forEach(function (radio) { radio.addEventListener("change", copyBasicToInfo); });
+  warehouseTypesInfo.forEach(function (radio) {
+    radio.addEventListener("change", function () { copyWarehouseType(warehouseTypesInfo, warehouseTypes); });
+  });
+  copyBasicToInfo();
+
+  tabs.forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      tabs.forEach(function (item) {
+        const active = item.dataset.entryTab === tab.dataset.entryTab;
+        item.classList.toggle("active", active);
+        item.setAttribute("aria-selected", String(active));
+      });
+      document.querySelectorAll("#entryForm [data-entry-panel]").forEach(function (panel) {
+        panel.hidden = panel.dataset.entryPanel !== tab.dataset.entryTab;
+      });
+    });
+  });
+  if (tabs.length) tabs[0].click();
+  entryForm.addEventListener("reset", function () {
+    if (tabs.length) setTimeout(function () { tabs[0].click(); copyBasicToInfo(); }, 0);
+  });
+  document.querySelectorAll("[data-original-action]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      alert(button.dataset.originalAction + " 기능 구현이 필요합니다.");
+    });
+  });
+
+  document.querySelector("#includeInactiveButton").addEventListener("click", function () {
+    includeInactiveInput.value = includeInactiveInput.value === "true" ? "false" : "true";
+    searchForm.requestSubmit();
+  });
+
+  // 개별 선택 상태를 전체선택 체크박스에 반영한다
+  // 個別選択の状態を全選択チェックボックスに反映する
+  const syncSelectAll = function () {
+    const checkedCount = selectedRows().length;
+    selectAllRows.checked = rowCheckboxes.length > 0 && checkedCount === rowCheckboxes.length;
+    selectAllRows.indeterminate = checkedCount > 0 && checkedCount < rowCheckboxes.length;
+  };
+  rowCheckboxes.forEach(function (checkbox) {
+    checkbox.addEventListener("change", syncSelectAll);
+  });
+  selectAllRows.addEventListener("change", function () {
+    rowCheckboxes.forEach(function (checkbox) { checkbox.checked = selectAllRows.checked; });
+    syncSelectAll();
+  });
+
+  // 같은 제목을 다시 누르면 정렬 방향을 반대로 바꾼다
+  // 同じ見出しを再度押すとソート方向を反転する
+  document.querySelectorAll("[data-sort-by]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      const nextSortBy = button.dataset.sortBy;
+      const sameColumn = sortByInput.value === nextSortBy;
+      sortDirectionInput.value = sameColumn && sortDirectionInput.value === "asc" ? "desc" : "asc";
+      sortByInput.value = nextSortBy;
+      searchForm.requestSubmit();
+    });
+  });
+
+  // 화면을 다시 열어도 현재 검색 조건을 유지한다
+  // 画面を開き直しても現在の検索条件を維持する
+  const listParams = function () {
+    const params = new URLSearchParams();
+    const keyword = document.querySelector("#searchInput").value.trim();
+    if (keyword) params.set("q", keyword);
+    if (includeInactiveInput.value === "true") params.set("includeInactive", "true");
+    params.set("sortBy", sortByInput.value);
+    params.set("sortDirection", sortDirectionInput.value);
+    return params;
+  };
+  newButton.addEventListener("click", function () {
+    const params = listParams();
+    params.set("mode", "new");
+    location.href = listUrl + "?" + params.toString();
+  });
+  const openEdit = function (id) {
+    const params = listParams();
+    params.set("editId", id);
+    params.set("page", "${warehousePage.page}");
+    location.href = listUrl + "?" + params.toString();
+  };
+  document.querySelector("#editButton").addEventListener("click", function () {
+    const id = selectedId();
+    if (!id) { alert("변경할 창고를 하나 선택해 주세요."); return; }
+    openEdit(id);
+  });
+  document.querySelectorAll("[data-edit-id]").forEach(function (button) { button.addEventListener("click", function () { openEdit(button.dataset.editId); }); });
+  document.querySelectorAll("[data-page-url]").forEach(function (button) { button.addEventListener("click", function () { if (button.dataset.pageUrl) location.href = button.dataset.pageUrl; }); });
+  document.querySelector("#toggleForm").addEventListener("submit", function (event) {
+    const id = selectedId();
+    if (!id) { event.preventDefault(); alert("사용 상태를 변경할 창고를 하나 선택해 주세요."); return; }
+    document.querySelector("#toggleWarehouseId").value = id;
+  });
+  document.querySelector("#entryCloseButton").addEventListener("click", function () { entryDialog.close(); });
+  entryForm.addEventListener("submit", function (event) {
+    const code = entryForm.querySelector("[name='warehouseCode']").value.trim();
+    const name = entryForm.querySelector("[name='warehouseName']").value.trim();
+    if (!code || !name) {
+      event.preventDefault();
+      entryForm.querySelector(".entry-error").textContent = "창고코드와 창고명은 필수입니다.";
+    }
+  });
+  if (${openNew or not empty editingWarehouse}) entryDialog.showModal();
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "F2" && !entryDialog.open) { event.preventDefault(); newButton.click(); }
+    if (event.key === "F8" && entryDialog.open) { event.preventDefault(); entryForm.requestSubmit(); }
+    if (event.key === "F3" && !entryDialog.open) { event.preventDefault(); searchForm.requestSubmit(); }
+  });
+});
+</script>
 </body>
 </html>
+
+
+
+

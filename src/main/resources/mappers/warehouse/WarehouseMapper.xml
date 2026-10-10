@@ -1,4 +1,93 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.hexagon.hcount.mapper.warehouse.WarehouseMapper">
+	<resultMap id="warehouseMap" type="com.hexagon.hcount.domain.warehouse.WarehouseVO">
+		<id property="warehouseId" column="WH_ID" />
+		<result property="warehouseCode" column="WH_CD" />
+		<result property="warehouseName" column="WH_NM" />
+		<result property="warehouseType" column="WH_TP" />
+		<result property="useYn" column="USE_YN" />
+		<result property="registeredAt" column="REG_DT" />
+		<result property="modifiedAt" column="MOD_DT" />
+	</resultMap>
+
+	<sql id="warehouseColumns">
+		WH_ID, WH_CD, WH_NM, WH_TP, USE_YN, REG_DT, MOD_DT
+	</sql>
+
+	<!-- 목록과 건수 조회에 같은 조건 사용 / リストと件数照会に同じ条件を使用 -->
+	<sql id="searchCondition">
+		<if test="!includeInactive">
+			AND USE_YN = 'Y'
+		</if>
+		<if test="keyword != null and keyword != ''">
+			AND (
+				UPPER(WH_CD) LIKE '%' || UPPER(#{keyword}) || '%'
+				OR UPPER(WH_NM) LIKE '%' || UPPER(#{keyword}) || '%'
+			)
+		</if>
+	</sql>
+
+	<!-- Oracle ROW_NUMBER로 페이지 조회 / Oracle ROW_NUMBERでページ照会 -->
+	<select id="selectWarehouses" resultMap="warehouseMap">
+		SELECT <include refid="warehouseColumns" />
+		FROM (
+			SELECT W.*, ROW_NUMBER() OVER (ORDER BY
+				<choose>
+					<when test="sortBy == 'name'">W.WH_NM</when>
+					<when test="sortBy == 'type'">W.WH_TP</when>
+					<when test="sortBy == 'status'">W.USE_YN</when>
+					<otherwise>W.WH_CD</otherwise>
+				</choose>
+				<choose>
+					<when test="sortDirection == 'desc'">DESC</when>
+					<otherwise>ASC</otherwise>
+				</choose>, W.WH_ID DESC) AS RN
+			FROM WH W
+			WHERE 1 = 1
+			<include refid="searchCondition" />
+		)
+		WHERE RN &gt; #{startRow}
+		AND RN &lt;= #{endRow}
+		ORDER BY RN
+	</select>
+
+	<select id="countWarehouses" resultType="int">
+		SELECT COUNT(*)
+		FROM WH
+		WHERE 1 = 1
+		<include refid="searchCondition" />
+	</select>
+
+	<select id="selectWarehouse" resultMap="warehouseMap">
+		SELECT <include refid="warehouseColumns" />
+		FROM WH
+		WHERE WH_ID = #{warehouseId}
+	</select>
+
+	<select id="selectWarehouseByCode" resultMap="warehouseMap">
+		SELECT <include refid="warehouseColumns" />
+		FROM WH
+		WHERE WH_CD = #{warehouseCode}
+	</select>
+
+	<insert id="insertWarehouse" parameterType="com.hexagon.hcount.domain.warehouse.WarehouseVO">
+		INSERT INTO WH (WH_ID, WH_CD, WH_NM, WH_TP, USE_YN, REG_DT, MOD_DT)
+		VALUES (SEQ_WH.NEXTVAL, #{warehouseCode}, #{warehouseName}, #{warehouseType}, #{useYn}, SYSTIMESTAMP, SYSTIMESTAMP)
+	</insert>
+
+	<update id="updateWarehouse" parameterType="com.hexagon.hcount.domain.warehouse.WarehouseVO">
+		UPDATE WH
+		SET WH_NM = #{warehouseName},
+			WH_TP = #{warehouseType},
+			USE_YN = #{useYn},
+			MOD_DT = SYSTIMESTAMP
+		WHERE WH_ID = #{warehouseId}
+	</update>
+
+	<update id="updateUseYn">
+		UPDATE WH
+		SET USE_YN = #{useYn}, MOD_DT = SYSTIMESTAMP
+		WHERE WH_ID = #{warehouseId}
+	</update>
 </mapper>

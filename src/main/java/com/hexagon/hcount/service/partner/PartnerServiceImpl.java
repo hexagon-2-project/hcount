@@ -22,14 +22,20 @@ public class PartnerServiceImpl implements PartnerService {
 	// 검색 조건으로 목록 조회
 	// 検索条件でリストを照会
 	public PartnerPage getPartners(String keyword, Integer page, Integer amount, boolean includeInactive) {
-		PartnerSearchCriteria criteria = new PartnerSearchCriteria(keyword, page, amount, includeInactive);
+		return getPartners(keyword, page, amount, includeInactive, "code", "asc");
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public PartnerPage getPartners(String keyword, Integer page, Integer amount, boolean includeInactive,
+			String sortBy, String sortDirection) {
+		PartnerSearchCriteria criteria = new PartnerSearchCriteria(keyword, page, amount, includeInactive,
+				sortBy, sortDirection);
 		return new PartnerPage(mapper.selectPartners(criteria), criteria, mapper.countPartners(criteria));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
-	// 번호로 거래처 한 건 조회
-	// 番号で取引先を1件照会
 	public PartnerVO getPartner(Long partnerId) {
 		if (partnerId == null) {
 			return null;
@@ -53,8 +59,6 @@ public class PartnerServiceImpl implements PartnerService {
 
 	@Override
 	@Transactional
-	// 선택한 거래처 정보 수정
-	// 選択した取引先情報を修正
 	public boolean modify(PartnerVO partner) {
 		if (partner == null || partner.getPartnerId() == null) {
 			throw new IllegalArgumentException("수정할 거래처를 선택해 주세요.");
@@ -65,8 +69,6 @@ public class PartnerServiceImpl implements PartnerService {
 
 	@Override
 	@Transactional
-	// Y와 N 값을 서로 바꾼다
-	// YとNの値を切り替える
 	public boolean toggleUse(Long partnerId) {
 		PartnerVO partner = getPartner(partnerId);
 		if (partner == null) {
@@ -74,6 +76,17 @@ public class PartnerServiceImpl implements PartnerService {
 		}
 		String nextUseYn = "Y".equalsIgnoreCase(partner.getUseYn()) ? "N" : "Y";
 		return mapper.updateUseYn(partnerId, nextUseYn) == 1;
+	}
+
+	@Override
+	@Transactional
+	// 데이터는 남기고 삭제 여부만 변경한다
+	// データは残して削除状態だけ変更する
+	public boolean deletePartner(Long partnerId) {
+		if (partnerId == null || getPartner(partnerId) == null) {
+			return false;
+		}
+		return mapper.softDeletePartner(partnerId) == 1;
 	}
 
 	// 공백 정리하고 필수값 확인
@@ -101,6 +114,8 @@ public class PartnerServiceImpl implements PartnerService {
 		partner.setSearchText(trimToNull(partner.getSearchText()));
 		partner.setHomepage(trimToNull(partner.getHomepage()));
 		partner.setCurrencyCode(upperOrDefault(partner.getCurrencyCode(), "KRW"));
+		partner.setUseYn("N".equalsIgnoreCase(trim(partner.getUseYn())) ? "N" : "Y");
+		partner.setDelYn("N");
 		if (partner.getPartnerCode().isEmpty()) {
 			throw new IllegalArgumentException("거래처코드를 입력해 주세요.");
 		}

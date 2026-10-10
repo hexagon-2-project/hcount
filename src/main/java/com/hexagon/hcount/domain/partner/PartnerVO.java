@@ -4,8 +4,6 @@ import java.util.Date;
 
 import lombok.Data;
 
-// 거래처 정보를 담는 객체
-// 取引先情報を入れるオブジェクト
 @Data
 public class PartnerVO {
 	// 기본 정보
@@ -36,6 +34,7 @@ public class PartnerVO {
 	private Long employeeId;
 	private String currencyCode;
 	private String useYn;
+	private String delYn;
 	private Date registeredAt;
 	private Date modifiedAt;
 }

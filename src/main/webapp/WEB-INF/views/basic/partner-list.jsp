@@ -9,16 +9,71 @@
 <title>거래처리스트</title>
 <jsp:include page="../common/styles.jsp" />
 <style>
-/* 검색 버튼과 같은 크기 / 検索ボタンと同じサイズ */
-.include-inactive-button {
-  height: 36px;
-  padding: 0 20px;
-  border: 1px solid var(--line);
-  border-radius: 0;
-  background: #fff;
-  color: var(--text);
-  white-space: nowrap;
+.simple-search .include-inactive-button {
+	height: 36px;
+	padding: 0 20px;
+	border: 1px solid #dce2ea !important;
+	border-radius: 0;
+	outline: 0;
+	background: #fff !important;
+	box-shadow: none;
+	color: #10204a !important;
+	white-space: nowrap;
+	appearance: none;
 }
+
+.simple-search .include-inactive-button:hover,
+.simple-search .include-inactive-button:focus,
+.simple-search .include-inactive-button:focus-visible,
+.simple-search .include-inactive-button:active {
+	border: 1px solid #dce2ea !important;
+	outline: 0;
+	background: #fff !important;
+	box-shadow: none;
+	color: #10204a !important;
+}
+
+.simple-page .list-table th .list-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: auto;
+  min-width: 0;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #123b8f;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  appearance: none;
+}
+
+.simple-page .list-table th .list-sort-button:hover,
+.simple-page .list-table th .list-sort-button:focus,
+.simple-page .list-table th .list-sort-button:focus-visible {
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+  color: #2457b8;
+}
+
+.sort-arrow {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid #123b8f;
+}
+
 </style>
 </head>
 <body data-message="${fn:escapeXml(message)}" data-error="${fn:escapeXml(error)}">
@@ -26,6 +81,7 @@
 <c:url var="registerUrl" value="/basic/partner/register" />
 <c:url var="updateUrl" value="/basic/partner/update" />
 <c:url var="toggleUrl" value="/basic/partner/toggle-use" />
+<c:url var="deleteUrl" value="/basic/partner/delete" />
 <c:choose>
   <c:when test="${not empty editingPartner}"><c:set var="entryAction" value="${updateUrl}" /></c:when>
   <c:otherwise><c:set var="entryAction" value="${registerUrl}" /></c:otherwise>
@@ -39,24 +95,25 @@
         <h1>거래처리스트</h1>
       </header>
       <section class="screen-content simple-page">
-        <%-- 거래처 검색 / 取引先検索 --%>
         <form class="simple-search" method="get" action="${listUrl}" id="searchForm">
           <input type="search" name="q" id="searchInput" value="${fn:escapeXml(q)}"
             placeholder="검색어 입력" aria-label="거래처리스트 검색">
           <input type="hidden" name="includeInactive" id="includeInactiveInput" value="${includeInactive}">
+          <input type="hidden" name="sortBy" id="sortByInput" value="${partnerPage.sortBy}">
+          <input type="hidden" name="sortDirection" id="sortDirectionInput" value="${partnerPage.sortDirection}">
           <button type="submit" class="primary-button">검색(F3)</button>
           <button type="button" class="include-inactive-button" id="includeInactiveButton" aria-pressed="${includeInactive}">사용중단포함</button>
         </form>
-        <%-- 거래처 목록 / 取引先リスト --%>
         <div class="table-scroll">
           <table class="list-table">
             <thead>
               <tr>
                 <th class="selection-column"><input type="checkbox" class="list-row-select" id="selectAllRows" aria-label="전체 선택"></th>
-                <th>거래처코드</th>
-                <th>상호(이름)</th>
-                <th>사업자등록번호</th>
-                <th>대표자</th>
+                <th><button type="button" class="list-sort-button" data-sort-by="code">거래처코드<span class="sort-arrow"></span></button></th>
+                <th><button type="button" class="list-sort-button" data-sort-by="name">상호(이름)<span class="sort-arrow"></span></button></th>
+                <th><button type="button" class="list-sort-button" data-sort-by="bizNo">사업자등록번호<span class="sort-arrow"></span></button></th>
+                <th><button type="button" class="list-sort-button" data-sort-by="ceo">대표자<span class="sort-arrow"></span></button></th>
+                <th><button type="button" class="list-sort-button" data-sort-by="status">사용상태<span class="sort-arrow"></span></button></th>
                 <th>수정</th>
               </tr>
             </thead>
@@ -68,24 +125,24 @@
                   <td><c:out value="${partner.partnerName}" /></td>
                   <td><c:out value="${partner.bizNo}" /></td>
                   <td><c:out value="${partner.ceoName}" /></td>
+                  <td><c:choose><c:when test="${partner.useYn eq 'N'}">사용중단</c:when><c:otherwise>사용</c:otherwise></c:choose></td>
                   <td><button type="button" class="row-edit-button" data-edit-id="${partner.partnerId}">수정</button></td>
                 </tr>
               </c:forEach>
               <c:if test="${empty partnerPage.partners}">
-                <tr><td colspan="6">등록된 데이터가 없습니다.</td></tr>
+                <tr><td colspan="7">등록된 데이터가 없습니다.</td></tr>
               </c:if>
             </tbody>
           </table>
         </div>
-        <%-- 페이지 이동 / ページ移動 --%>
         <nav class="list-pagination" aria-label="페이지 이동">
           <span class="list-pagination-count">총 <c:out value="${partnerPage.totalCount}" />건</span>
           <div class="list-pagination-controls">
-            <c:url var="firstUrl" value="/basic/partner-list"><c:param name="page" value="1"/><c:param name="q" value="${q}"/><c:param name="includeInactive" value="${includeInactive}"/></c:url>
+            <c:url var="firstUrl" value="/basic/partner-list"><c:param name="page" value="1"/><c:param name="q" value="${q}"/><c:param name="includeInactive" value="${includeInactive}"/><c:param name="sortBy" value="${partnerPage.sortBy}"/><c:param name="sortDirection" value="${partnerPage.sortDirection}"/></c:url>
             <button type="button" aria-label="첫 페이지" data-page-url="${firstUrl}" ${partnerPage.page le 1 ? 'disabled' : ''}>«</button>
             <c:choose>
               <c:when test="${partnerPage.previous}">
-                <c:url var="previousUrl" value="/basic/partner-list"><c:param name="page" value="${partnerPage.startPage - 1}"/><c:param name="q" value="${q}"/><c:param name="includeInactive" value="${includeInactive}"/></c:url>
+                <c:url var="previousUrl" value="/basic/partner-list"><c:param name="page" value="${partnerPage.startPage - 1}"/><c:param name="q" value="${q}"/><c:param name="includeInactive" value="${includeInactive}"/><c:param name="sortBy" value="${partnerPage.sortBy}"/><c:param name="sortDirection" value="${partnerPage.sortDirection}"/></c:url>
                 <button type="button" aria-label="이전 페이지 묶음" data-page-url="${previousUrl}">‹</button>
               </c:when>
               <c:otherwise><button type="button" aria-label="이전 페이지 묶음" disabled>‹</button></c:otherwise>
@@ -96,24 +153,23 @@
                   <span class="list-pagination-current" aria-current="page"><c:out value="${pageNumber}" /></span>
                 </c:when>
                 <c:otherwise>
-                  <c:url var="pageUrl" value="/basic/partner-list"><c:param name="page" value="${pageNumber}"/><c:param name="q" value="${q}"/><c:param name="includeInactive" value="${includeInactive}"/></c:url>
+                  <c:url var="pageUrl" value="/basic/partner-list"><c:param name="page" value="${pageNumber}"/><c:param name="q" value="${q}"/><c:param name="includeInactive" value="${includeInactive}"/><c:param name="sortBy" value="${partnerPage.sortBy}"/><c:param name="sortDirection" value="${partnerPage.sortDirection}"/></c:url>
                   <button type="button" aria-label="${pageNumber} 페이지" data-page-url="${pageUrl}"><c:out value="${pageNumber}" /></button>
                 </c:otherwise>
               </c:choose>
             </c:forEach>
             <c:choose>
               <c:when test="${partnerPage.next}">
-                <c:url var="nextUrl" value="/basic/partner-list"><c:param name="page" value="${partnerPage.endPage + 1}"/><c:param name="q" value="${q}"/><c:param name="includeInactive" value="${includeInactive}"/></c:url>
+                <c:url var="nextUrl" value="/basic/partner-list"><c:param name="page" value="${partnerPage.endPage + 1}"/><c:param name="q" value="${q}"/><c:param name="includeInactive" value="${includeInactive}"/><c:param name="sortBy" value="${partnerPage.sortBy}"/><c:param name="sortDirection" value="${partnerPage.sortDirection}"/></c:url>
                 <button type="button" aria-label="다음 페이지 묶음" data-page-url="${nextUrl}">›</button>
               </c:when>
               <c:otherwise><button type="button" aria-label="다음 페이지 묶음" disabled>›</button></c:otherwise>
             </c:choose>
-            <c:url var="lastUrl" value="/basic/partner-list"><c:param name="page" value="${partnerPage.totalPages}"/><c:param name="q" value="${q}"/><c:param name="includeInactive" value="${includeInactive}"/></c:url>
+            <c:url var="lastUrl" value="/basic/partner-list"><c:param name="page" value="${partnerPage.totalPages}"/><c:param name="q" value="${q}"/><c:param name="includeInactive" value="${includeInactive}"/><c:param name="sortBy" value="${partnerPage.sortBy}"/><c:param name="sortDirection" value="${partnerPage.sortDirection}"/></c:url>
             <button type="button" aria-label="마지막 페이지" data-page-url="${lastUrl}" ${partnerPage.page ge partnerPage.totalPages ? 'disabled' : ''}>»</button>
           </div>
           <span class="list-pagination-total"><c:out value="${partnerPage.page}" /> / <c:out value="${partnerPage.totalPages}" /> 페이지</span>
         </nav>
-        <%-- 목록에서 사용할 버튼만 남김 / リストで使うボタンだけ残す --%>
         <div class="list-footer-actions" role="group" aria-label="목록 작업">
           <button type="button" id="newButton">신규(F2)</button>
           <button type="button" id="editButton">변경</button>
@@ -122,14 +178,24 @@
             <input type="hidden" name="q" value="${fn:escapeXml(q)}">
             <input type="hidden" name="page" value="${partnerPage.page}">
             <input type="hidden" name="includeInactive" value="${includeInactive}">
+            <input type="hidden" name="sortBy" value="${partnerPage.sortBy}">
+            <input type="hidden" name="sortDirection" value="${partnerPage.sortDirection}">
             <button type="submit" id="toggleButton">사용중단/재사용</button>
+          </form>
+          <form action="${deleteUrl}" method="post" id="deleteForm" style="display:inline">
+            <input type="hidden" name="partnerId" id="deletePartnerId">
+            <input type="hidden" name="q" value="${fn:escapeXml(q)}">
+            <input type="hidden" name="page" value="${partnerPage.page}">
+            <input type="hidden" name="includeInactive" value="${includeInactive}">
+            <input type="hidden" name="sortBy" value="${partnerPage.sortBy}">
+            <input type="hidden" name="sortDirection" value="${partnerPage.sortDirection}">
+            <button type="submit">삭제</button>
           </form>
         </div>
       </section>
     </main>
   </div>
 
-  <%-- 기존 등록창 디자인 유지 / 既存の登録画面デザインを維持 --%>
   <dialog id="entryDialog" class="simple-dialog reference-dialog" aria-labelledby="entryTitle">
     <form id="entryForm" method="post" action="${entryAction}" novalidate>
       <h2 id="entryTitle"><c:choose><c:when test="${not empty editingPartner}">거래처수정</c:when><c:otherwise>거래처등록</c:otherwise></c:choose></h2>
@@ -137,9 +203,9 @@
       <input type="hidden" name="q" value="${fn:escapeXml(q)}">
       <input type="hidden" name="page" value="${partnerPage.page}">
       <input type="hidden" name="includeInactive" value="${includeInactive}">
-      <input type="hidden" name="useYn" value="${empty editingPartner.useYn ? 'Y' : editingPartner.useYn}">
+      <input type="hidden" name="sortBy" value="${partnerPage.sortBy}">
+      <input type="hidden" name="sortDirection" value="${partnerPage.sortDirection}">
       <div class="reference-fields">
-        <%-- 부가정보 탭은 제외 / 付加情報タブは除外 --%>
         <div class="master-entry-tabs" role="tablist">
           <button type="button" role="tab" data-entry-tab="A1" aria-controls="panel-A1" aria-selected="true" class="active">기본</button>
           <button type="button" role="tab" data-entry-tab="A2" aria-controls="panel-A2" aria-selected="false">거래처정보</button>
@@ -228,6 +294,13 @@
               </select>
             </div></div></div>
           </div>
+          <div class="reference-row" data-reference-label="사용형태">
+            <div class="reference-label">사용형태</div>
+            <div class="reference-control"><div class="control-set"><div class="control">
+              <span class="form-radio"><input type="radio" id="partnerUseYnYes" name="useYn" value="Y" ${empty editingPartner.useYn or editingPartner.useYn eq 'Y' ? 'checked' : ''}><label for="partnerUseYnYes">사용</label></span>
+              <span class="form-radio"><input type="radio" id="partnerUseYnNo" name="useYn" value="N" ${editingPartner.useYn eq 'N' ? 'checked' : ''}><label for="partnerUseYnNo">사용중단</label></span>
+            </div></div></div>
+          </div>
           <div class="reference-row" data-reference-label="거래처 담당자">
             <div class="reference-label">거래처 담당자</div>
             <div class="reference-control"><div class="control-set"><div class="control">
@@ -300,9 +373,11 @@ document.addEventListener("DOMContentLoaded", function () {
   const searchForm = document.querySelector("#searchForm");
   const includeInactiveInput = document.querySelector("#includeInactiveInput");
   const includeInactiveButton = document.querySelector("#includeInactiveButton");
-  // 한 번에 한 거래처만 선택
-  // 一度に一つの取引先だけ選択
-  const selectedRows = function () { return Array.from(document.querySelectorAll(".partner-select:checked")); };
+  const sortByInput = document.querySelector("#sortByInput");
+  const sortDirectionInput = document.querySelector("#sortDirectionInput");
+  const rowCheckboxes = Array.from(document.querySelectorAll(".partner-select"));
+  const selectAllRows = document.querySelector("#selectAllRows");
+  const selectedRows = function () { return rowCheckboxes.filter(function (checkbox) { return checkbox.checked; }); };
   const selectedId = function () { const selected = selectedRows(); return selected.length === 1 ? selected[0].value : null; };
 
   const message = document.body.dataset.message;
@@ -315,25 +390,40 @@ document.addEventListener("DOMContentLoaded", function () {
     searchForm.requestSubmit();
   });
 
-  document.querySelectorAll(".partner-select").forEach(function (checkbox) {
-    checkbox.addEventListener("change", function () {
-      if (checkbox.checked) document.querySelectorAll(".partner-select").forEach(function (other) { if (other !== checkbox) other.checked = false; });
-    });
+  // 개별 선택 상태를 전체선택 체크박스에 반영한다
+  // 個別選択の状態を全選択チェックボックスに反映する
+  const syncSelectAll = function () {
+    const checkedCount = selectedRows().length;
+    selectAllRows.checked = rowCheckboxes.length > 0 && checkedCount === rowCheckboxes.length;
+    selectAllRows.indeterminate = checkedCount > 0 && checkedCount < rowCheckboxes.length;
+  };
+  rowCheckboxes.forEach(function (checkbox) {
+    checkbox.addEventListener("change", syncSelectAll);
   });
-  const selectAllRows = document.querySelector("#selectAllRows");
-  if (selectAllRows) selectAllRows.addEventListener("change", function () {
-    const first = document.querySelector(".partner-select");
-    document.querySelectorAll(".partner-select").forEach(function (item) { item.checked = false; });
-    if (selectAllRows.checked && first) first.checked = true;
+  selectAllRows.addEventListener("change", function () {
+    rowCheckboxes.forEach(function (checkbox) { checkbox.checked = selectAllRows.checked; });
+    syncSelectAll();
   });
 
-  // 신규와 수정 창 열기
-  // 新規と修正画面を開く
+  // 같은 제목을 다시 누르면 정렬 방향을 반대로 바꾼다
+  // 同じ見出しを再度押すと並び順を反転する
+  document.querySelectorAll("[data-sort-by]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      const nextSortBy = button.dataset.sortBy;
+      const sameColumn = sortByInput.value === nextSortBy;
+      sortDirectionInput.value = sameColumn && sortDirectionInput.value === "asc" ? "desc" : "asc";
+      sortByInput.value = nextSortBy;
+      searchForm.requestSubmit();
+    });
+  });
+
   const currentListParams = function () {
     const params = new URLSearchParams();
     const keyword = document.querySelector("#searchInput").value.trim();
     if (keyword) params.set("q", keyword);
     if (includeInactiveInput.value === "true") params.set("includeInactive", "true");
+    params.set("sortBy", sortByInput.value);
+    params.set("sortDirection", sortDirectionInput.value);
     return params;
   };
   newButton.addEventListener("click", function () {
@@ -359,12 +449,19 @@ document.addEventListener("DOMContentLoaded", function () {
     button.addEventListener("click", function () { if (button.dataset.pageUrl) location.href = button.dataset.pageUrl; });
   });
 
-  // 선택한 거래처의 사용상태 변경
-  // 選択した取引先の使用状態を変更
   document.querySelector("#toggleForm").addEventListener("submit", function (event) {
     const id = selectedId();
     if (!id) { event.preventDefault(); alert("사용 상태를 변경할 거래처를 하나 선택해 주세요."); return; }
     document.querySelector("#togglePartnerId").value = id;
+  });
+
+  // 선택한 거래처는 DB에서 지우지 않고 삭제상태로 바꾼다
+  // 選択した取引先はDBから削除せず削除状態に変更する
+  document.querySelector("#deleteForm").addEventListener("submit", function (event) {
+    const id = selectedId();
+    if (!id) { event.preventDefault(); alert("삭제할 거래처를 하나 선택해 주세요."); return; }
+    if (!confirm("선택한 거래처를 삭제하시겠습니까?")) { event.preventDefault(); return; }
+    document.querySelector("#deletePartnerId").value = id;
   });
 
   document.querySelector("#entryCloseButton").addEventListener("click", function () { entryDialog.close(); });
@@ -377,8 +474,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // 등록창 탭 이동
-  // 登録画面のタブ移動
   const tabs = Array.from(document.querySelectorAll("#entryForm [data-entry-tab]"));
   tabs.forEach(function (tab) {
     tab.addEventListener("click", function () {
@@ -404,3 +499,5 @@ document.addEventListener("DOMContentLoaded", function () {
 </script>
 </body>
 </html>
+
+

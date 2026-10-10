@@ -21,8 +21,6 @@ import com.hexagon.hcount.domain.partner.PartnerSearchCriteria;
 import com.hexagon.hcount.domain.partner.PartnerVO;
 import com.hexagon.hcount.mapper.partner.PartnerMapper;
 
-// 실제 DB 없이 Service 로직 확인
-// 実際のDBなしでServiceロジックを確認
 @RunWith(MockitoJUnitRunner.class)
 public class PartnerServiceTests {
 	@Mock
@@ -36,8 +34,6 @@ public class PartnerServiceTests {
 	}
 
 	@Test
-	// 검색어와 페이지 기본값 확인
-	// 検索語とページ基本値を確認
 	public void getPartnersNormalizesSearchAndBuildsPage() {
 		PartnerVO partner = partner("HJ001", "황가상사");
 		when(mapper.selectPartners(any(PartnerSearchCriteria.class))).thenReturn(Arrays.asList(partner));
@@ -51,11 +47,22 @@ public class PartnerServiceTests {
 		assertEquals(120, result.getTotalCount());
 		assertEquals(5, result.getEndPage());
 		assertTrue(result.isIncludeInactive());
+		assertEquals("code", result.getSortBy());
+		assertEquals("asc", result.getSortDirection());
 	}
 
 	@Test
-	// 등록값 공백과 기본값 확인
-	// 登録値の空白と基本値を確認
+	public void getPartnersKeepsAllowedSortCondition() {
+		when(mapper.selectPartners(any(PartnerSearchCriteria.class))).thenReturn(Arrays.<PartnerVO>asList());
+		when(mapper.countPartners(any(PartnerSearchCriteria.class))).thenReturn(0);
+
+		PartnerPage result = service.getPartners("황지호", 1, 20, false, "ceo", "desc");
+
+		assertEquals("ceo", result.getSortBy());
+		assertEquals("desc", result.getSortDirection());
+	}
+
+	@Test
 	public void registerTrimsValuesAndUsesDefaults() {
 		PartnerVO partner = partner(" HJ001 ", " 황가상사 ");
 		partner.setPartnerType(null);
@@ -71,11 +78,25 @@ public class PartnerServiceTests {
 		assertEquals("황가상사", captor.getValue().getPartnerName());
 		assertEquals("SALES", captor.getValue().getPartnerType());
 		assertEquals("KRW", captor.getValue().getCurrencyCode());
+		assertEquals("Y", captor.getValue().getUseYn());
+		assertEquals("N", captor.getValue().getDelYn());
+	}
+
+	@Test
+	public void registerKeepsInactiveStatus() {
+		PartnerVO partner = partner("HJ002", "황지호상사");
+		partner.setUseYn("N");
+		when(mapper.selectPartnerByCode("HJ002")).thenReturn(null);
+		when(mapper.insertPartner(any(PartnerVO.class))).thenReturn(1);
+
+		service.register(partner);
+
+		ArgumentCaptor<PartnerVO> captor = ArgumentCaptor.forClass(PartnerVO.class);
+		verify(mapper).insertPartner(captor.capture());
+		assertEquals("N", captor.getValue().getUseYn());
 	}
 
 	@Test(expected = IllegalArgumentException.class)
-	// 중복 코드 차단 확인
-	// 重複コードの遮断を確認
 	public void registerRejectsDuplicateCode() {
 		PartnerVO partner = partner("HJ001", "황가상사");
 		when(mapper.selectPartnerByCode("HJ001")).thenReturn(new PartnerVO());
@@ -83,8 +104,6 @@ public class PartnerServiceTests {
 	}
 
 	@Test
-	// 수정 결과 확인
-	// 修正結果を確認
 	public void modifyReturnsMapperResult() {
 		PartnerVO partner = partner("HJ001", "지호상사");
 		partner.setPartnerId(10L);
@@ -93,8 +112,6 @@ public class PartnerServiceTests {
 	}
 
 	@Test
-	// 사용상태 변경 확인
-	// 使用状態の変更を確認
 	public void toggleUseChangesYToNAndReturnsFalseWhenMissing() {
 		PartnerVO active = partner("HJ001", "황가상사");
 		active.setPartnerId(10L);
@@ -106,6 +123,19 @@ public class PartnerServiceTests {
 
 		when(mapper.selectPartner(99L)).thenReturn(null);
 		assertFalse(service.toggleUse(99L));
+	}
+
+	@Test
+	public void deletePartnerChangesOnlyDeleteStatus() {
+		PartnerVO partner = partner("HJ003", "지호상사");
+		partner.setPartnerId(10L);
+		when(mapper.selectPartner(10L)).thenReturn(partner);
+		when(mapper.softDeletePartner(10L)).thenReturn(1);
+
+		assertTrue(service.deletePartner(10L));
+		verify(mapper).softDeletePartner(10L);
+		when(mapper.selectPartner(99L)).thenReturn(null);
+		assertFalse(service.deletePartner(99L));
 	}
 
 	private PartnerVO partner(String code, String name) {

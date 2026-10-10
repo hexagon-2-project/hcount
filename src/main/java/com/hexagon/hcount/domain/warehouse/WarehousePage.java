@@ -1,4 +1,4 @@
-package com.hexagon.hcount.domain.partner;
+package com.hexagon.hcount.domain.warehouse;
 
 import java.util.Collections;
 import java.util.List;
@@ -8,8 +8,8 @@ import lombok.Getter;
 // 목록과 페이지 번호를 같이 담는다
 // リストとページ番号を一緒に入れる
 @Getter
-public class PartnerPage {
-	private final List<PartnerVO> partners;
+public class WarehousePage {
+	private final List<WarehouseVO> warehouses;
 	private final String keyword;
 	private final int page;
 	private final int amount;
@@ -23,21 +23,19 @@ public class PartnerPage {
 	private final String sortBy;
 	private final String sortDirection;
 
-	// 전체 건수로 페이지 범위를 계산
-	// 全体件数からページ範囲を計算
-	public PartnerPage(List<PartnerVO> partners, PartnerSearchCriteria criteria, int totalCount) {
-		this.partners = partners == null ? Collections.<PartnerVO>emptyList() : partners;
+	public WarehousePage(List<WarehouseVO> warehouses, WarehouseSearchCriteria criteria, int totalCount) {
+		this.warehouses = warehouses == null ? Collections.<WarehouseVO>emptyList() : warehouses;
 		this.keyword = criteria.getKeyword();
 		this.page = criteria.getPage();
 		this.amount = criteria.getAmount();
 		this.totalCount = totalCount;
-		this.includeInactive = criteria.isIncludeInactive();
-		this.sortBy = criteria.getSortBy();
-		this.sortDirection = criteria.getSortDirection();
 		this.totalPages = Math.max(1, (int) Math.ceil(totalCount / (double) amount));
 		this.endPage = Math.min(totalPages, ((page - 1) / 5 + 1) * 5);
 		this.startPage = Math.max(1, endPage - 4);
 		this.previous = startPage > 1;
 		this.next = endPage < totalPages;
+		this.includeInactive = criteria.isIncludeInactive();
+		this.sortBy = criteria.getSortBy();
+		this.sortDirection = criteria.getSortDirection();
 	}
 }

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.hexagon.hcount.mapper.partner.PartnerMapper">
-	<!-- DB 컬럼과 Java 변수 연결 / DBカラムとJava変数を接続 -->
 	<resultMap id="partnerMap" type="com.hexagon.hcount.domain.partner.PartnerVO">
 		<id property="partnerId" column="PARTNER_ID" />
 		<result property="partnerCode" column="PARTNER_CD" />
@@ -25,6 +24,7 @@
 		<result property="employeeId" column="EMP_ID" />
 		<result property="currencyCode" column="CURR_CD" />
 		<result property="useYn" column="USE_YN" />
+		<result property="delYn" column="DEL_YN" />
 		<result property="registeredAt" column="REG_DT" />
 		<result property="modifiedAt" column="MOD_DT" />
 	</resultMap>
@@ -33,11 +33,12 @@
 		PARTNER_ID, PARTNER_CD, PARTNER_NM, PARTNER_TP, BIZ_NO, CEO_NM,
 		BIZ_TYPE, BIZ_ITEM, TEL, FAX, CONTACT_NM, EMAIL, MOBILE,
 		ZIP_CD1, ADDR1, ZIP_CD2, ADDR2, SEARCH_TEXT, HOMEPAGE,
-		EMP_ID, CURR_CD, USE_YN, REG_DT, MOD_DT
+		EMP_ID, CURR_CD, USE_YN, DEL_YN, REG_DT, MOD_DT
 	</sql>
 
 	<!-- 코드, 상호, 사업자번호, 대표자명으로 검색 / コード、商号、事業者番号、代表者名で検索 -->
 	<sql id="searchCondition">
+		AND DEL_YN = 'N'
 		<if test="!includeInactive">
 			AND USE_YN = 'Y'
 		</if>
@@ -56,7 +57,18 @@
 	<select id="selectPartners" resultMap="partnerMap">
 		SELECT <include refid="partnerColumns" />
 		FROM (
-			SELECT P.*, ROW_NUMBER() OVER (ORDER BY P.PARTNER_ID DESC) AS RN
+			SELECT P.*, ROW_NUMBER() OVER (ORDER BY
+				<choose>
+					<when test="sortBy == 'name'">P.PARTNER_NM</when>
+					<when test="sortBy == 'bizNo'">P.BIZ_NO</when>
+					<when test="sortBy == 'ceo'">P.CEO_NM</when>
+					<when test="sortBy == 'status'">P.USE_YN</when>
+					<otherwise>P.PARTNER_CD</otherwise>
+				</choose>
+				<choose>
+					<when test="sortDirection == 'desc'">DESC</when>
+					<otherwise>ASC</otherwise>
+				</choose>, P.PARTNER_ID DESC) AS RN
 			FROM PARTNER P
 			WHERE 1 = 1
 			<include refid="searchCondition" />
@@ -77,6 +89,7 @@
 		SELECT <include refid="partnerColumns" />
 		FROM PARTNER
 		WHERE PARTNER_ID = #{partnerId}
+		AND DEL_YN = 'N'
 	</select>
 
 	<select id="selectPartnerByCode" resultMap="partnerMap">
@@ -85,22 +98,20 @@
 		WHERE PARTNER_CD = #{partnerCode}
 	</select>
 
-	<!-- 신규 거래처 저장 / 新しい取引先を保存 -->
 	<insert id="insertPartner" parameterType="com.hexagon.hcount.domain.partner.PartnerVO">
 		INSERT INTO PARTNER (
 			PARTNER_ID, PARTNER_CD, PARTNER_NM, PARTNER_TP, BIZ_NO, CEO_NM,
 			BIZ_TYPE, BIZ_ITEM, TEL, FAX, CONTACT_NM, EMAIL, MOBILE,
 			ZIP_CD1, ADDR1, ZIP_CD2, ADDR2, HOMEPAGE,
-			CURR_CD, USE_YN, REG_DT, MOD_DT
+			CURR_CD, USE_YN, DEL_YN, REG_DT, MOD_DT
 		) VALUES (
 			SEQ_PARTNER.NEXTVAL, #{partnerCode}, #{partnerName}, #{partnerType}, #{bizNo}, #{ceoName},
 			#{bizType}, #{bizItem}, #{tel}, #{fax}, #{contactName}, #{email}, #{mobile},
 			#{zipCode1}, #{address1}, #{zipCode2}, #{address2}, #{homepage},
-			#{currencyCode}, 'Y', SYSTIMESTAMP, SYSTIMESTAMP
+			#{currencyCode}, #{useYn}, 'N', SYSTIMESTAMP, SYSTIMESTAMP
 		)
 	</insert>
 
-	<!-- 거래처 정보 수정 / 取引先情報を修正 -->
 	<update id="updatePartner" parameterType="com.hexagon.hcount.domain.partner.PartnerVO">
 		UPDATE PARTNER
 		SET PARTNER_NM = #{partnerName},
@@ -120,14 +131,24 @@
 			ADDR2 = #{address2},
 			HOMEPAGE = #{homepage},
 			CURR_CD = #{currencyCode},
+			USE_YN = #{useYn},
 			MOD_DT = SYSTIMESTAMP
 		WHERE PARTNER_ID = #{partnerId}
+		AND DEL_YN = 'N'
 	</update>
 
-	<!-- 사용 여부만 변경 / 使用可否だけ変更 -->
 	<update id="updateUseYn">
 		UPDATE PARTNER
 		SET USE_YN = #{useYn}, MOD_DT = SYSTIMESTAMP
 		WHERE PARTNER_ID = #{partnerId}
+		AND DEL_YN = 'N'
+	</update>
+
+	<!-- 실제 행은 지우지 않고 삭제상태만 변경 / 実際の行は削除せず削除状態だけ変更 -->
+	<update id="softDeletePartner">
+		UPDATE PARTNER
+		SET DEL_YN = 'Y', MOD_DT = SYSTIMESTAMP
+		WHERE PARTNER_ID = #{partnerId}
+		AND DEL_YN = 'N'
 	</update>
 </mapper>

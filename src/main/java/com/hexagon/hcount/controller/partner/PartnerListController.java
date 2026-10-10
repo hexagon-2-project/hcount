@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.hexagon.hcount.domain.partner.PartnerPage;
+import com.hexagon.hcount.domain.partner.PartnerSearchCriteria;
 import com.hexagon.hcount.domain.partner.PartnerVO;
 import com.hexagon.hcount.service.partner.PartnerService;
 
@@ -20,14 +21,14 @@ public class PartnerListController {
 	private final PartnerService service;
 
 	@GetMapping("/basic/partner-list")
-	// 거래처 목록 화면 열기
-	// 取引先リスト画面を開く
 	public String page(@RequestParam(value = "q", required = false) String keyword,
 			@RequestParam(value = "page", required = false) Integer page,
 			@RequestParam(value = "editId", required = false) Long editId,
 			@RequestParam(value = "mode", required = false) String mode,
-			@RequestParam(value = "includeInactive", defaultValue = "false") boolean includeInactive, Model model) {
-		PartnerPage partnerPage = service.getPartners(keyword, page, 20, includeInactive);
+			@RequestParam(value = "includeInactive", defaultValue = "false") boolean includeInactive,
+			@RequestParam(value = "sortBy", defaultValue = "code") String sortBy,
+			@RequestParam(value = "sortDirection", defaultValue = "asc") String sortDirection, Model model) {
+		PartnerPage partnerPage = service.getPartners(keyword, page, 20, includeInactive, sortBy, sortDirection);
 		model.addAttribute("partnerPage", partnerPage);
 		model.addAttribute("q", partnerPage.getKeyword());
 		model.addAttribute("includeInactive", partnerPage.isIncludeInactive());
@@ -42,11 +43,11 @@ public class PartnerListController {
 	}
 
 	@PostMapping("/basic/partner/register")
-	// 신규 거래처 저장
-	// 新しい取引先を保存
 	public String register(@ModelAttribute PartnerVO partner, @RequestParam(value = "q", required = false) String keyword,
 			@RequestParam(value = "page", required = false) Integer page,
 			@RequestParam(value = "includeInactive", defaultValue = "false") boolean includeInactive,
+			@RequestParam(value = "sortBy", defaultValue = "code") String sortBy,
+			@RequestParam(value = "sortDirection", defaultValue = "asc") String sortDirection,
 			RedirectAttributes redirectAttributes) {
 		try {
 			service.register(partner);
@@ -54,16 +55,16 @@ public class PartnerListController {
 		} catch (IllegalArgumentException | IllegalStateException exception) {
 			redirectAttributes.addFlashAttribute("error", exception.getMessage());
 		}
-		addListParameters(redirectAttributes, keyword, page, includeInactive);
+		addListParameters(redirectAttributes, keyword, page, includeInactive, sortBy, sortDirection);
 		return "redirect:/basic/partner-list";
 	}
 
 	@PostMapping("/basic/partner/update")
-	// 선택한 거래처 수정
-	// 選択した取引先を修正
 	public String update(@ModelAttribute PartnerVO partner, @RequestParam(value = "q", required = false) String keyword,
 			@RequestParam(value = "page", required = false) Integer page,
 			@RequestParam(value = "includeInactive", defaultValue = "false") boolean includeInactive,
+			@RequestParam(value = "sortBy", defaultValue = "code") String sortBy,
+			@RequestParam(value = "sortDirection", defaultValue = "asc") String sortDirection,
 			RedirectAttributes redirectAttributes) {
 		try {
 			if (service.modify(partner)) {
@@ -74,31 +75,48 @@ public class PartnerListController {
 		} catch (IllegalArgumentException exception) {
 			redirectAttributes.addFlashAttribute("error", exception.getMessage());
 		}
-		addListParameters(redirectAttributes, keyword, page, includeInactive);
+		addListParameters(redirectAttributes, keyword, page, includeInactive, sortBy, sortDirection);
 		return "redirect:/basic/partner-list";
 	}
 
 	@PostMapping("/basic/partner/toggle-use")
-	// 사용중단 또는 재사용 처리
-	// 使用停止または再使用を処理
 	public String toggleUse(@RequestParam("partnerId") Long partnerId,
 			@RequestParam(value = "q", required = false) String keyword,
 			@RequestParam(value = "page", required = false) Integer page,
 			@RequestParam(value = "includeInactive", defaultValue = "false") boolean includeInactive,
+			@RequestParam(value = "sortBy", defaultValue = "code") String sortBy,
+			@RequestParam(value = "sortDirection", defaultValue = "asc") String sortDirection,
 			RedirectAttributes redirectAttributes) {
 		if (service.toggleUse(partnerId)) {
 			redirectAttributes.addFlashAttribute("message", "사용 상태가 변경되었습니다.");
 		} else {
 			redirectAttributes.addFlashAttribute("error", "변경할 거래처를 찾지 못했습니다.");
 		}
-		addListParameters(redirectAttributes, keyword, page, includeInactive);
+		addListParameters(redirectAttributes, keyword, page, includeInactive, sortBy, sortDirection);
+		return "redirect:/basic/partner-list";
+	}
+
+	@PostMapping("/basic/partner/delete")
+	public String delete(@RequestParam("partnerId") Long partnerId,
+			@RequestParam(value = "q", required = false) String keyword,
+			@RequestParam(value = "page", required = false) Integer page,
+			@RequestParam(value = "includeInactive", defaultValue = "false") boolean includeInactive,
+			@RequestParam(value = "sortBy", defaultValue = "code") String sortBy,
+			@RequestParam(value = "sortDirection", defaultValue = "asc") String sortDirection,
+			RedirectAttributes redirectAttributes) {
+		if (service.deletePartner(partnerId)) {
+			redirectAttributes.addFlashAttribute("message", "거래처가 삭제되었습니다.");
+		} else {
+			redirectAttributes.addFlashAttribute("error", "삭제할 거래처를 찾지 못했습니다.");
+		}
+		addListParameters(redirectAttributes, keyword, page, includeInactive, sortBy, sortDirection);
 		return "redirect:/basic/partner-list";
 	}
 
 	// 처리 후에도 검색 위치 유지
 	// 処理後も検索位置を維持
 	private void addListParameters(RedirectAttributes redirectAttributes, String keyword, Integer page,
-			boolean includeInactive) {
+			boolean includeInactive, String sortBy, String sortDirection) {
 		if (keyword != null && !keyword.trim().isEmpty()) {
 			redirectAttributes.addAttribute("q", keyword.trim());
 		}
@@ -107,6 +125,13 @@ public class PartnerListController {
 		}
 		if (includeInactive) {
 			redirectAttributes.addAttribute("includeInactive", true);
+		}
+		PartnerSearchCriteria criteria = new PartnerSearchCriteria(null, 1, 20, false, sortBy, sortDirection);
+		if (!"code".equals(criteria.getSortBy())) {
+			redirectAttributes.addAttribute("sortBy", criteria.getSortBy());
+		}
+		if (!"asc".equals(criteria.getSortDirection())) {
+			redirectAttributes.addAttribute("sortDirection", criteria.getSortDirection());
 		}
 	}
 }
